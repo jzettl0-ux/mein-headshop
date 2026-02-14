@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+  }
+}
+
+/* Branding (Admin anpassbar) – Defaults (Dark) */
+:root {
+  --luxe-black: #0A0A0A;
+  --luxe-charcoal: #1A1A1A;
+  --luxe-gray: #2A2A2A;
+  --luxe-silver: #8A8A8A;
+  --luxe-primary: #D4AF37;
+  --luxe-accent: #39FF14;
+}
+
+/* Helles Design – Kiffergrün (Light Cannabis Green) – mit !important gegen API-Overrides */
+.theme-light {
+  --luxe-black: #F0F7F0 !important;   /* Haupt-Hintergrund: helles Grün-Weiß */
+  --luxe-charcoal: #E8F0E8 !important; /* Karten/Flächen: zartes Mint */
+  --luxe-gray: #D4E5D4 !important;     /* Rahmen, Borders: helles Grün-Grau */
+  --luxe-silver: #4A6B4A !important;  /* Sekundärtext: gedämpftes Grün */
+  --luxe-primary: #2D5A2D !important;  /* Primär: kräftiges Grün (Buttons, Links) */
+  --luxe-accent: #3D8B3D !important;   /* Akzent: frisches Kiffergrün */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Dark Luxe Globals (Standard) */
+@layer base {
+  html,
+  body {
+    background-color: #0a0a0a;
+    color: #ffffff;
+  }
+  body {
+    @apply antialiased;
+    background-color: var(--luxe-black, #0a0a0a);
+    color: #ffffff;
+  }
+}
+
+/* Helles Design – Body & Text (!important damit Seite wirklich hell bleibt) */
+.theme-light html,
+.theme-light body {
+  background-color: #F0F7F0 !important;
+  color: #1a2e1a !important;
+}
+.theme-light body {
+  background-color: var(--luxe-black, #F0F7F0) !important;
+  color: #1a2e1a !important;
+}
+
+/* Light Theme: Überschreibungen für Texte die sonst weiß sind */
+.theme-light .text-white {
+  color: #1a2e1a !important;
+}
+.theme-light .border-luxe-gray {
+  border-color: var(--luxe-gray, #D4E5D4) !important;
+}
+
+/* Buttons/Karten: Auf Grün weiße Schrift für Lesbarkeit */
+.theme-light .bg-luxe-gold,
+.theme-light .hover\:bg-luxe-gold:hover {
+  color: #fff !important;
+}
+.theme-light a.bg-luxe-gold span,
+.theme-light button.bg-luxe-gold span {
+  color: #fff !important;
+}
+.theme-light [class*="from-luxe-gold"] .text-luxe-black {
+  color: #fff !important;
+}
+
+/* Badge-Beschriftungen im Light-Theme (Kiffergrün) */
+.theme-light [data-badge-variant="adult"] {
+  background-color: #ea580c !important;
+  color: #fff !important;
+  border-color: #c2410c !important;
+  border-width: 2px !important;
+  box-shadow: 0 0 0 1px rgba(234, 88, 12, 0.4) !important;
+}
+.theme-light [data-badge-variant="featured"] {
+  background-color: var(--luxe-accent, #3D8B3D) !important;
+  color: #fff !important;
+  border-color: var(--luxe-accent, #3D8B3D) !important;
+}
+.theme-light [data-badge-variant="influencer"] {
+  background-color: var(--luxe-primary, #2D5A2D) !important;
+  color: #fff !important;
+}
+.theme-light [data-badge-variant="stock"] {
+  background-color: var(--luxe-silver, #4A6B4A) !important;
+  color: #fff !important;
+}
+
+/* Admin-Bereich: gleiches helles Design (Kiffergrün) wie Shop */
+.theme-light .admin-area,
+.theme-light .admin-area .bg-luxe-black,
+.theme-light .admin-area .bg-luxe-charcoal {
+  background-color: var(--luxe-black, #F0F7F0) !important;
+}
+.theme-light .admin-area .bg-luxe-charcoal {
+  background-color: var(--luxe-charcoal, #E8F0E8) !important;
+}
+.theme-light .admin-area main.bg-luxe-black {
+  background-color: var(--luxe-black, #F0F7F0) !important;
+}
+.theme-light .admin-area .bg-luxe-gray {
+  background-color: var(--luxe-gray, #D4E5D4) !important;
+}
+.theme-light .admin-area input,
+.theme-light .admin-area select,
+.theme-light .admin-area textarea {
+  color: #1a2e1a !important;
+}
+.theme-light .admin-area .text-white {
+  color: #1a2e1a !important;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+}
+
+/* Custom Scrollbar */
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-luxe::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-luxe::-webkit-scrollbar-track {
+    background: #1A1A1A;
+  }
+
+  .scrollbar-luxe::-webkit-scrollbar-thumb {
+    background: #2A2A2A;
+    border-radius: 4px;
+  }
+
+  .scrollbar-luxe::-webkit-scrollbar-thumb:hover {
+    background: #D4AF37;
+  }
+
+  .theme-light .scrollbar-luxe::-webkit-scrollbar-track {
+    background: #E8F0E8;
+  }
+
+  .theme-light .scrollbar-luxe::-webkit-scrollbar-thumb {
+    background: #D4E5D4;
+  }
+
+  .theme-light .scrollbar-luxe::-webkit-scrollbar-thumb:hover {
+    background: #2D5A2D;
+  }
+}
+
+/* Gradient Text Effects */
+@layer utilities {
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-yellow-200 via-luxe-gold to-yellow-600 bg-clip-text text-transparent;
+  }
+
+  .theme-light .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, #3D8B3D, #2D5A2D, #1e4d1e);
+  }
+
+  .text-gradient-neon {
+    @apply bg-gradient-to-r from-green-400 via-luxe-neon to-emerald-400 bg-clip-text text-transparent;
+  }
+
+  .theme-light .text-gradient-neon {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, #5fa35f, #3D8B3D, #2D5A2D);
+  }
+}
+
+/* Glass Morphism Effect */
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+
+  .glass-dark {
+    @apply bg-black/20 backdrop-blur-md border border-white/5;
+  }
+
+  .theme-light .glass {
+    @apply bg-white/60 backdrop-blur-md border border-black/5;
+  }
+}
+
+/* Animation Utilities */
+@layer utilities {
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    }
+    to {
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 0 0 30px rgba(212, 175, 55, 0.4);
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+}
+
+/* Product Card Hover Effects (funktioniert in Dark + Light via CSS-Variablen) */
+@layer components {
+  .product-card {
+    @apply relative overflow-hidden rounded-lg border border-luxe-gray bg-luxe-charcoal transition-all duration-300;
+  }
+
+  .product-card:hover {
+    @apply shadow-2xl;
+    border-color: var(--luxe-primary);
+    transform: translateY(-4px);
+  }
+
+  .product-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none;
+    background: linear-gradient(to top, rgba(212, 175, 55, 0.1), transparent);
+  }
+
+  .product-card:hover::before {
+    @apply opacity-100;
+  }
+
+  .theme-light .product-card::before {
+    background: linear-gradient(to top, rgba(45, 90, 45, 0.12), transparent);
+  }
+}
+
+/* Container Utilities */
+@layer utilities {
+  .container-luxe {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24 lg:py-32;
+  }
+}
