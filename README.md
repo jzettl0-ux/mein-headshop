@@ -351,4 +351,5 @@ Alle Rechte vorbehalten. © 2026 Premium Headshop
 **Made with 🌿 by Premium Headshop Team**  
 **Version:** 1.0.0 | **Status:** ✅ Production-Ready (Development)
 #   m e i n - h e a d s h o p  
+ #   m e i n - h e a d s h o p  
  
