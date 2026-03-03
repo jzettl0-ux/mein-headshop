@@ -1,8 +1,8 @@
 'use client'
 
-/**
- * Fängt Fehler im Root-Layout ab – verhindert weiße Seite bei Absturz.
- */
+import * as Sentry from '@sentry/nextjs'
+import { useEffect } from 'react'
+
 export default function GlobalError({
   error,
   reset,
@@ -10,31 +10,24 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
+
   return (
     <html lang="de">
-      <body style={{ background: '#0a0a0a', color: '#fff', fontFamily: 'system-ui', padding: '2rem', minHeight: '100vh' }}>
-        <div style={{ maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Fehler</h1>
-          <p style={{ color: '#8a8a8a', marginBottom: '1.5rem' }}>
-            {error?.message || 'Ein Fehler ist aufgetreten.'}
+      <body className="min-h-screen bg-luxe-black flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-white mb-4">Etwas ist schiefgelaufen</h1>
+          <p className="text-luxe-silver mb-6">
+            Ein unerwarteter Fehler ist aufgetreten. Wir wurden benachrichtigt und arbeiten daran.
           </p>
           <button
-            onClick={reset}
-            style={{
-              background: '#D4AF37',
-              color: '#0a0a0a',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '0.5rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            onClick={() => reset()}
+            className="px-6 py-3 bg-luxe-gold text-luxe-black font-semibold rounded-lg hover:bg-luxe-gold/90 transition-colors"
           >
             Erneut versuchen
           </button>
-          <p style={{ marginTop: '1.5rem' }}>
-            <a href="/" style={{ color: '#D4AF37' }}>Zur Startseite</a>
-          </p>
         </div>
       </body>
     </html>

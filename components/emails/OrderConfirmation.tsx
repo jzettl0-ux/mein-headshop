@@ -10,20 +10,18 @@ import {
   Heading,
   Hr,
   Link,
+  Img,
   render,
 } from '@react-email/components'
 import * as React from 'react'
-
-const background = '#0A0A0A'
-const gold = '#D4AF37'
-const silver = '#8A8A8A'
-const cardBg = '#1A1A1A'
-const border = '#2A2A2A'
+import { emailStyles as s } from './email-styles'
+import { ShopEmailHeader } from './ShopEmailHeader'
+import { ShopEmailFooter } from './ShopEmailFooter'
 
 export interface OrderConfirmationProps {
   orderNumber: string
   customerName: string
-  items: Array<{ name: string; quantity: number; price: number }>
+  items: Array<{ name: string; quantity: number; price: number; product_slug?: string; product_image?: string }>
   subtotal: number
   shipping: number
   total: number
@@ -35,6 +33,9 @@ export interface OrderConfirmationProps {
   }
   hasAdultItems?: boolean
   accountOrdersUrl?: string
+  attachInvoice?: boolean
+  /** Öffentliche URL des Shop-Logos (z. B. aus site_settings) */
+  logoUrl?: string
 }
 
 export function OrderConfirmationEmail({
@@ -47,53 +48,51 @@ export function OrderConfirmationEmail({
   shippingAddress,
   hasAdultItems,
   accountOrdersUrl,
+  attachInvoice,
+  logoUrl,
 }: OrderConfirmationProps) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://premium-headshop.de'
   return (
     <Html>
       <Head />
-      <Body style={{ backgroundColor: background, color: '#FFFFFF', fontFamily: 'sans-serif', margin: 0, padding: 0 }}>
-        <Container style={{ maxWidth: 600, margin: '0 auto', padding: 24 }}>
-          {/* Header */}
-          <Section
-            style={{
-              background: `linear-gradient(135deg, ${gold} 0%, #b8860b 50%, #39FF14 100%)`,
-              borderRadius: 12,
-              padding: 32,
-              textAlign: 'center' as const,
-              marginBottom: 24,
-            }}
-          >
-            <Heading style={{ color: background, margin: 0, fontSize: 26, fontWeight: 'bold' }}>
-              Bestellung bestätigt
-            </Heading>
-            <Text style={{ color: background, margin: '8px 0 0', fontSize: 14, opacity: 0.9 }}>
-              Premium Headshop
-            </Text>
-          </Section>
-
-          <Text style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 1.6 }}>
+      <Body style={{ backgroundColor: s.background, color: s.text, fontFamily: 'sans-serif', margin: 0, padding: 0 }}>
+        <Container style={{ maxWidth: 520, margin: '0 auto', padding: 32 }}>
+          <Section style={{ backgroundColor: s.cardBg, border: `1px solid ${s.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+            <ShopEmailHeader logoUrl={logoUrl} />
+            <Section style={{ padding: '32px 24px' }}>
+              <Heading style={{ color: s.text, margin: '0 0 8px', fontSize: 22, fontWeight: 'bold' }}>
+                Bestellung bestätigt
+              </Heading>
+              <Text style={{ color: s.text, fontSize: 16, lineHeight: 1.6 }}>
             Hallo {customerName},
           </Text>
-          <Text style={{ color: silver, fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
+          <Text style={{ color: s.textMuted, fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
             vielen Dank für deine Bestellung. Wir haben deine Zahlung erhalten und bearbeiten deine Bestellung.
           </Text>
+          <Text style={{ color: s.text, fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
+            Hier ist deine Bestellung <strong>#{orderNumber}</strong> im Überblick – so behältst du immer den Überblick, was du bestellt hast:
+          </Text>
+          {attachInvoice && (
+            <Text style={{ color: s.textMuted, fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
+              <strong style={{ color: s.text }}>Im Anhang</strong> findest du deine Rechnung als PDF mit allen Bestelldetails (Artikel, Preise, Summen, Adresse).
+            </Text>
+          )}
 
           {/* Bestellnummer */}
           <Section
             style={{
-              backgroundColor: cardBg,
-              border: `1px solid ${gold}`,
+              backgroundColor: s.cardBg,
+              border: `1px solid ${s.primary}`,
               borderRadius: 8,
               padding: 20,
               textAlign: 'center' as const,
               margin: '24px 0',
             }}
           >
-            <Text style={{ color: silver, fontSize: 12, margin: 0, textTransform: 'uppercase' }}>
+            <Text style={{ color: s.textMuted, fontSize: 12, margin: 0, textTransform: 'uppercase' }}>
               Bestellnummer
             </Text>
-            <Text style={{ color: gold, fontSize: 24, fontWeight: 'bold', margin: '4px 0 0' }}>
+            <Text style={{ color: s.primary, fontSize: 24, fontWeight: 'bold', margin: '4px 0 0' }}>
               #{orderNumber}
             </Text>
           </Section>
@@ -101,46 +100,57 @@ export function OrderConfirmationEmail({
           {hasAdultItems && (
             <Section
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
                 borderRadius: 8,
                 padding: 16,
                 marginBottom: 24,
               }}
             >
-              <Text style={{ color: '#EF4444', fontWeight: 'bold', margin: 0 }}>
+              <Text style={{ color: '#DC2626', fontWeight: 'bold', margin: 0 }}>
                 Altersverifikation erforderlich (18+)
               </Text>
-              <Text style={{ color: '#EF4444', fontSize: 14, margin: '8px 0 0' }}>
+              <Text style={{ color: '#B91C1C', fontSize: 14, margin: '8px 0 0' }}>
                 Bei der Zustellung ist eine Identitätsprüfung durch DHL erforderlich. Bitte halte deinen Ausweis bereit.
               </Text>
             </Section>
           )}
 
-          {/* Produktliste */}
-          <Heading as="h2" style={{ color: '#FFFFFF', fontSize: 18, marginBottom: 12 }}>
-            Bestellte Artikel
+          {/* Produktliste mit Bildern */}
+          <Heading as="h2" style={{ color: s.text, fontSize: 18, marginBottom: 12 }}>
+            Deine bestellten Artikel
           </Heading>
           <Section
             style={{
-              backgroundColor: cardBg,
-              border: `1px solid ${border}`,
+              backgroundColor: s.cardBg,
+              border: `1px solid ${s.border}`,
               borderRadius: 8,
               overflow: 'hidden',
             }}
           >
             {items.map((item, i) => (
-              <Row key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid ${border}` : 'none', padding: '12px 16px' }}>
-                <Column style={{ width: '60%' }}>
-                  <Text style={{ color: '#FFFFFF', margin: 0, fontSize: 14 }}>
+              <Row key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid ${s.border}` : 'none', padding: '12px 16px', alignItems: 'center' }}>
+                <Column style={{ width: 72, verticalAlign: 'middle', paddingRight: 12 }}>
+                  {item.product_image ? (
+                    <Img
+                      src={item.product_image}
+                      alt={item.name}
+                      width={56}
+                      height={56}
+                      style={{ borderRadius: 8, objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : null}
+                </Column>
+                <Column style={{ width: '50%', verticalAlign: 'middle' }}>
+                  <Text style={{ color: s.text, margin: 0, fontSize: 14, fontWeight: 600 }}>
                     {item.name}
                   </Text>
-                  <Text style={{ color: silver, margin: '2px 0 0', fontSize: 12 }}>
+                  <Text style={{ color: s.textMuted, margin: '2px 0 0', fontSize: 12 }}>
                     {item.quantity} × {(item.price).toFixed(2)} €
                   </Text>
                 </Column>
-                <Column style={{ width: '40%', textAlign: 'right' }}>
-                  <Text style={{ color: gold, margin: 0, fontSize: 14, fontWeight: 'bold' }}>
+                <Column style={{ width: 90, textAlign: 'right', verticalAlign: 'middle' }}>
+                  <Text style={{ color: s.primary, margin: 0, fontSize: 14, fontWeight: 'bold' }}>
                     {(item.price * item.quantity).toFixed(2)} €
                   </Text>
                 </Column>
@@ -151,33 +161,33 @@ export function OrderConfirmationEmail({
           {/* Summen */}
           <Section style={{ marginTop: 24 }}>
             <Row style={{ padding: '8px 0' }}>
-              <Column><Text style={{ color: silver, margin: 0, fontSize: 14 }}>Zwischensumme</Text></Column>
-              <Column style={{ textAlign: 'right' }}><Text style={{ color: '#FFFFFF', margin: 0, fontSize: 14 }}>{subtotal.toFixed(2)} €</Text></Column>
+              <Column><Text style={{ color: s.textMuted, margin: 0, fontSize: 14 }}>Zwischensumme</Text></Column>
+              <Column style={{ textAlign: 'right' }}><Text style={{ color: s.text, margin: 0, fontSize: 14 }}>{subtotal.toFixed(2)} €</Text></Column>
             </Row>
             <Row style={{ padding: '8px 0' }}>
-              <Column><Text style={{ color: silver, margin: 0, fontSize: 14 }}>Versand</Text></Column>
-              <Column style={{ textAlign: 'right' }}><Text style={{ color: '#FFFFFF', margin: 0, fontSize: 14 }}>{shipping.toFixed(2)} €</Text></Column>
+              <Column><Text style={{ color: s.textMuted, margin: 0, fontSize: 14 }}>Versand</Text></Column>
+              <Column style={{ textAlign: 'right' }}><Text style={{ color: s.text, margin: 0, fontSize: 14 }}>{shipping.toFixed(2)} €</Text></Column>
             </Row>
-            <Hr style={{ borderColor: border, margin: '12px 0' }} />
+            <Hr style={{ borderColor: s.border, margin: '12px 0' }} />
             <Row style={{ padding: '8px 0' }}>
-              <Column><Text style={{ color: '#FFFFFF', margin: 0, fontSize: 16, fontWeight: 'bold' }}>Gesamt</Text></Column>
-              <Column style={{ textAlign: 'right' }}><Text style={{ color: gold, margin: 0, fontSize: 18, fontWeight: 'bold' }}>{total.toFixed(2)} €</Text></Column>
+              <Column><Text style={{ color: s.text, margin: 0, fontSize: 16, fontWeight: 'bold' }}>Gesamt</Text></Column>
+              <Column style={{ textAlign: 'right' }}><Text style={{ color: s.primary, margin: 0, fontSize: 18, fontWeight: 'bold' }}>{total.toFixed(2)} €</Text></Column>
             </Row>
           </Section>
 
           {/* Lieferadresse */}
-          <Heading as="h2" style={{ color: '#FFFFFF', fontSize: 18, marginTop: 28, marginBottom: 12 }}>
+          <Heading as="h2" style={{ color: s.text, fontSize: 18, marginTop: 28, marginBottom: 12 }}>
             Lieferadresse
           </Heading>
           <Section
             style={{
-              backgroundColor: cardBg,
-              border: `1px solid ${border}`,
+              backgroundColor: s.cardBg,
+              border: `1px solid ${s.border}`,
               borderRadius: 8,
               padding: 16,
             }}
           >
-            <Text style={{ color: silver, margin: 0, fontSize: 14, lineHeight: 1.6 }}>
+            <Text style={{ color: s.textMuted, margin: 0, fontSize: 14, lineHeight: 1.6 }}>
               {customerName}<br />
               {shippingAddress.street} {shippingAddress.house_number}<br />
               {shippingAddress.postal_code} {shippingAddress.city}
@@ -190,8 +200,8 @@ export function OrderConfirmationEmail({
                 href={accountOrdersUrl}
                 style={{
                   display: 'inline-block',
-                  backgroundColor: gold,
-                  color: background,
+                  backgroundColor: s.primary,
+                  color: s.background,
                   padding: '12px 28px',
                   borderRadius: 8,
                   fontWeight: 'bold',
@@ -201,16 +211,49 @@ export function OrderConfirmationEmail({
               >
                 Bestellung im Kundenbereich anzeigen
               </Link>
-              <Text style={{ color: silver, fontSize: 12, marginTop: 12 }}>
+              <Text style={{ color: s.textMuted, fontSize: 12, marginTop: 12 }}>
                 Deine Rechnung kannst du dort als PDF herunterladen.
               </Text>
             </Section>
           )}
 
-          <Hr style={{ borderColor: border, margin: '32px 0 16px' }} />
-          <Text style={{ color: silver, fontSize: 12, textAlign: 'center' as const }}>
-            Bei Fragen: {siteUrl}/impressum · © {new Date().getFullYear()} Premium Headshop
-          </Text>
+          {/* Bitte bewerten + direkte Links zu den bestellten Produkten */}
+          {items.some((i) => i.product_slug) && (
+            <Section
+              style={{
+                backgroundColor: s.cardBg,
+                border: `1px solid ${s.border}`,
+                borderRadius: 8,
+                padding: 20,
+                marginTop: 24,
+              }}
+            >
+              <Heading as="h2" style={{ color: s.text, fontSize: 16, margin: '0 0 8px' }}>
+                Deine Meinung zählt
+              </Heading>
+              <Text style={{ color: s.textMuted, fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' }}>
+                Hast du deine bestellten Produkte schon ausprobiert? Wir freuen uns über eine kurze Bewertung – sie hilft anderen Kunden bei der Entscheidung.
+              </Text>
+              <Text style={{ color: s.text, fontSize: 14, margin: '0 0 8px' }}>Schnell zu deinen Produkten:</Text>
+              {items.filter((i) => i.product_slug).map((item, idx) => (
+                <div key={idx} style={{ marginBottom: 6 }}>
+                  <Link
+                    href={`${siteUrl}/shop/${item.product_slug}`}
+                    style={{ color: s.primary, fontSize: 14, textDecoration: 'underline' }}
+                  >
+                    {item.name}
+                  </Link>
+                </div>
+              ))}
+              <Text style={{ color: s.textMuted, fontSize: 12, marginTop: 12 }}>
+                Auf der Produktseite kannst du direkt bewerten (eine Bewertung pro Bestellung möglich).
+              </Text>
+            </Section>
+          )}
+
+              <ShopEmailFooter />
+            </Section>
+          </Section>
         </Container>
       </Body>
     </Html>

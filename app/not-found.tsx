@@ -6,12 +6,12 @@ export default function NotFound() {
     <div className="min-h-screen bg-luxe-black flex items-center justify-center p-4">
       <div className="text-center space-y-6 max-w-md">
         {/* 404 Number */}
-        <div className="text-9xl font-bold text-gradient-gold">
+        <div className="text-9xl font-bold text-gradient-flow">
           404
         </div>
 
         {/* Message */}
-        <h1 className="text-3xl font-bold text-white">
+        <h1 className="text-3xl font-bold text-gradient-flow">
           Seite nicht gefunden
         </h1>
         <p className="text-luxe-silver text-lg">
@@ -35,6 +35,13 @@ export default function NotFound() {
             Zum Shop
           </Link>
         </div>
+        <p className="text-luxe-silver/70 text-sm pt-8">
+          <Link href="/impressum" className="hover:text-luxe-gold transition-colors">Impressum</Link>
+          {' · '}
+          <Link href="/privacy" className="hover:text-luxe-gold transition-colors">Datenschutz</Link>
+          {' · '}
+          <Link href="/terms" className="hover:text-luxe-gold transition-colors">AGB & Widerruf</Link>
+        </p>
       </div>
     </div>
   )

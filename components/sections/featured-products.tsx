@@ -20,6 +20,7 @@ export function FeaturedProducts() {
     const { data } = await supabase
       .from('products')
       .select('*')
+      .eq('is_active', true)
       .eq('is_featured', true)
       .limit(4)
 
@@ -36,34 +37,45 @@ export function FeaturedProducts() {
   const products = featuredProducts
 
   return (
-    <section className="section-padding bg-luxe-black">
+    <section className="section-padding section-cream">
       <div className="container-luxe">
-        {/* Section Header – deutlich schmaler als Influencer-Bereich */}
-        <div className="max-w-md mb-12">
-          <div className="flex items-end justify-between gap-4">
+        {/* Section Header – volle Breite */}
+        <div className="mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div className="space-y-2">
               <motion.span
-                initial={{ opacity: 1, x: 0 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="text-luxe-gold uppercase text-sm font-semibold tracking-wider"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5 }}
+                className="text-gradient-flow uppercase text-sm font-semibold tracking-wider"
               >
-                Bestseller
+                Store-Highlights
               </motion.span>
               <motion.h2
-                initial={{ opacity: 1, x: 0 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: 0.08 }}
                 className="text-4xl md:text-5xl font-bold text-white"
               >
-                Top Drops
+                Von uns für dich ausgewählt
               </motion.h2>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: 0.12 }}
+                className="text-luxe-silver text-sm max-w-xl"
+              >
+                Handverlesene Favoriten – Qualität und Neuheiten, die wir dir besonders empfehlen. Für alle, die es ernst meinen.
+              </motion.p>
             </div>
             <motion.div
-              initial={{ opacity: 1, x: 0 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: 0.16 }}
               className="flex-shrink-0"
             >
               <Link
@@ -82,10 +94,10 @@ export function FeaturedProducts() {
           {products.map((product, index) => (
             <motion.div
               key={product.id}
-              initial={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              viewport={{ once: true, margin: '-30px' }}
+              transition={{ duration: 0.45, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               <ProductCard product={product} />
             </motion.div>

@@ -57,7 +57,7 @@ CREATE TABLE orders (
   subtotal DECIMAL(10,2) NOT NULL,
   shipping_cost DECIMAL(10,2) NOT NULL,
   total DECIMAL(10,2) NOT NULL,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled', 'cancellation_requested', 'cancellation_rejected', 'return_requested', 'return_rejected', 'return_completed')),
   has_adult_items BOOLEAN DEFAULT false,
   payment_method TEXT,
   payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),

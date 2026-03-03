@@ -46,3 +46,33 @@ Jeder Dienst, der deinen lokalen Port (z. B. 3000) unter einer öffentlichen H
 | Lokal      | `MOLLIE_WEBHOOK_URL=https://<tunnel-url>/api/payment/webhook` |
 
 Wenn du auf localhost bist und **keine** `MOLLIE_WEBHOOK_URL` gesetzt hast, zeigt der Checkout eine klare Fehlermeldung mit diesem Hinweis.
+
+---
+
+## Zahlung wird bei Mollie abgebrochen / bricht immer ab
+
+Wenn die Zahlung bei Mollie „abgebrochen“ erscheint oder nie als bezahlt ankommt:
+
+1. **Kunde bricht ab**  
+   Wenn der Kunde auf der Mollie-Seite „Abbrechen“ klickt oder das Fenster schließt, ist der Status bei Mollie `canceled`. Dann wird die Bestellung nie als bezahlt markiert und der Bestand nicht reduziert – das ist erwartetes Verhalten.
+
+2. **Redirect-URL erreichbar und HTTPS (Live)**  
+   - `NEXT_PUBLIC_SITE_URL` muss die **exakte** Domain sein, unter der der Shop läuft (z. B. `https://mein-shop.de`).  
+   - Im **Live-Modus** verlangt Mollie **HTTPS** für die Redirect-URL. Mit `http://` kann die Weiterleitung nach der Zahlung fehlschlagen oder als unsicher blockiert werden.
+
+3. **API-Schlüssel**  
+   - `MOLLIE_API_KEY` muss gesetzt sein (Test- oder Live-Key aus dem [Mollie Dashboard](https://www.mollie.com/dashboard)).  
+   - Test: Key beginnt mit `test_`.  
+   - Live: Key beginnt mit `live_`.  
+   - Wenn der Key fehlt oder falsch ist, schlägt die Erstellung der Zahlung bereits im Checkout fehl.
+
+4. **Betrag > 0**  
+   Mollie akzeptiert keine 0‑Euro-Zahlungen. Bei Gesamtbetrag 0 (z. B. durch Rabatt) wird im Checkout eine Fehlermeldung angezeigt und keine Zahlung erstellt.
+
+5. **Mollie Dashboard prüfen**  
+   Im Mollie Dashboard unter **Zahlungen** siehst du pro Zahlung den Status (`open`, `paid`, `canceled`, `expired`, `failed`). So erkennst du, ob die Zahlung technisch fehlschlägt oder der Kunde abbricht.
+
+6. **Bestellungen im Admin bleiben „Zahlung offen“**  
+   Wenn bei Mollie „bezahlt“ steht, die Bestellung im Admin aber „offen“ bleibt, hat weder der **Webhook** (z. B. URL nicht erreichbar) noch der **Success-Page-Sync** (Kunde hat Seite nicht geladen) gegriffen. Im **Admin** kannst du das nachziehen:
+   - **Einzelne Bestellung:** Bestellung öffnen → **„Zahlungsstatus von Mollie abgleichen“** (prüft bei Mollie und markiert als bezahlt).
+   - **Alle ausstehenden:** Auf der Bestellübersicht **„Ausstehende Zahlungen von Mollie abgleichen“** – prüft die letzten 30 Bestellungen mit offener Zahlung und übernimmt den Status von Mollie.

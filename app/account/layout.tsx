@@ -9,7 +9,7 @@ export default function AccountLayout({
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-20">
+      <main className="storefront-main min-h-screen pt-20 bg-chill-bg">
         {children}
       </main>
       <Footer />

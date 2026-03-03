@@ -7,10 +7,14 @@ import { Mail, Lock, User, Eye, EyeOff, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SecurePasswordInput } from '@/components/auth/secure-password-input'
+import { Gift } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { signIn } from '@/lib/supabase/auth'
+import { signIn, signOut } from '@/lib/supabase/auth'
 import { supabase } from '@/lib/supabase'
+import { allCriteriaMet } from '@/lib/password-validation'
 import Link from 'next/link'
+import { setStoredReferralCode } from '@/components/referral-capture'
 
 type AuthMode = 'login' | 'register'
 
@@ -21,11 +25,28 @@ export default function AuthPage() {
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [passwordValidation, setPasswordValidation] = useState<{
+    criteriaMet: boolean
+    pwnedCount: number
+  }>({ criteriaMet: false, pwnedCount: 0 })
+  const [referralCode, setReferralCode] = useState('')
+  const [newsletterOptIn, setNewsletterOptIn] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
 
   const redirectTo = searchParams.get('redirect') || '/account'
+  const isAdminRedirect = redirectTo.startsWith('/admin')
+  const wasDeleted = searchParams.get('deleted') === '1'
+
+  useEffect(() => {
+    const ref = searchParams.get('ref')
+    if (ref && typeof ref === 'string' && ref.trim().length >= 4) {
+      const code = ref.trim().toUpperCase()
+      setMode('register')
+      setReferralCode(code)
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,12 +54,26 @@ export default function AuthPage() {
 
     try {
       await signIn(email, password)
-      
+
+      if (isAdminRedirect) {
+        const meRes = await fetch('/api/admin/me')
+        if (!meRes.ok) {
+          await signOut()
+          toast({
+            title: 'Kein Zugang',
+            description: 'Dieser Account hat keine Admin-Berechtigung.',
+            variant: 'destructive',
+          })
+          setIsLoading(false)
+          return
+        }
+      }
+
       toast({
         title: 'Login erfolgreich',
         description: 'Willkommen zurück!',
       })
-      
+
       router.push(redirectTo)
     } catch (err: any) {
       console.error('Login error:', err)
@@ -54,6 +89,22 @@ export default function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!allCriteriaMet(password)) {
+      toast({
+        title: 'Passwort erfüllt die Anforderungen nicht',
+        description: 'Bitte prüfe die Hinweise unter dem Passwortfeld.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (passwordValidation.pwnedCount > 0) {
+      toast({
+        title: 'Passwort unsicher',
+        description: 'Dieses Passwort wurde in Datenleaks gefunden. Bitte wähle ein anderes.',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsLoading(true)
 
     try {
@@ -68,6 +119,16 @@ export default function AuthPage() {
       })
 
       if (error) throw error
+
+      if (newsletterOptIn && email) {
+        try {
+          await fetch('/api/newsletter/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'registration' }),
+          })
+        } catch { /* ignore */ }
+      }
 
       toast({
         title: 'Registrierung erfolgreich',
@@ -100,6 +161,12 @@ export default function AuthPage() {
         className="w-full max-w-md"
       >
         <div className="bg-luxe-charcoal border border-luxe-gray rounded-2xl p-8 shadow-2xl">
+          {wasDeleted && (
+            <div className="mb-6 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-200">
+              Ihr Konto wurde gelöscht. Sie können sich jederzeit wieder registrieren.
+            </div>
+          )}
+
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <Link href="/" className="flex items-center space-x-2">
@@ -177,9 +244,17 @@ export default function AuthPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">
-                    Passwort
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-white">
+                      Passwort
+                    </Label>
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-xs text-luxe-silver hover:text-luxe-gold transition-colors"
+                    >
+                      Passwort vergessen?
+                    </Link>
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-luxe-silver" />
                     <Input
@@ -259,31 +334,56 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="register-password" className="text-white">
-                    Passwort
+                <SecurePasswordInput
+                  id="register-password"
+                  value={password}
+                  onChange={setPassword}
+                  placeholder="Mindestens 12 Zeichen"
+                  disabled={isLoading}
+                  autoComplete="new-password"
+                  label="Passwort"
+                  onValidationChange={setPasswordValidation}
+                />
+
+                <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-luxe-gold/40 bg-luxe-gold/5 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={newsletterOptIn}
+                    onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded text-luxe-gold focus:ring-luxe-gold"
+                  />
+                  <div>
+                    <span className="text-white text-sm font-medium">Newsletter abonnieren</span>
+                    <p className="text-luxe-silver text-xs mt-0.5">Erhalte Willkommens-Rabatt und Neuigkeiten per E-Mail.</p>
+                    <p className="text-luxe-silver/40 text-[10px] mt-1 leading-tight">
+                      Hinweise zum Rabattversand und zur Verarbeitung findest du in unserer{' '}
+                      <Link href="/privacy" className="text-luxe-silver/50 hover:underline">Datenschutzerklärung</Link>.
+                    </p>
+                  </div>
+                </label>
+
+                <div className="rounded-lg border border-luxe-gold/40 bg-luxe-gold/5 px-4 py-3">
+                  <Label htmlFor="referral" className="text-luxe-silver text-xs">
+                    Empfehlungscode <span className="text-luxe-silver/70">(optional)</span>
                   </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-luxe-silver" />
+                  <div className="flex items-center gap-2 mt-1">
+                    <Gift className="w-5 h-5 text-luxe-gold shrink-0" />
                     <Input
-                      id="register-password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mindestens 8 Zeichen"
-                      className="bg-luxe-gray border-luxe-silver text-white pl-12 pr-12"
-                      required
-                      minLength={8}
+                      id="referral"
+                      value={referralCode}
+                      onChange={(e) => {
+                        const v = e.target.value.trim().toUpperCase()
+                        setReferralCode(v)
+                        if (v.length >= 4) setStoredReferralCode(v)
+                      }}
+                      placeholder="z. B. ABC12XYZ"
+                      className="bg-luxe-gray border-luxe-silver text-white font-mono"
                       disabled={isLoading}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-luxe-silver hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
                   </div>
+                  <p className="text-xs text-luxe-silver mt-1">
+                    10€ Rabatt ab 50€ Bestellwert – beim Checkout automatisch angewendet
+                  </p>
                 </div>
 
                 <Button
@@ -291,7 +391,11 @@ export default function AuthPage() {
                   variant="luxe"
                   size="lg"
                   className="w-full mt-6"
-                  disabled={isLoading}
+                  disabled={
+                    isLoading ||
+                    !allCriteriaMet(password) ||
+                    passwordValidation.pwnedCount > 0
+                  }
                 >
                   {isLoading ? 'Wird erstellt...' : 'Konto erstellen'}
                 </Button>

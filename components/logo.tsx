@@ -11,36 +11,34 @@ interface LogoProps {
 
 const sizeMap = { sm: 32, md: 40, lg: 48 }
 
+type LogoState = 'loading' | 'none' | string
+
 export function Logo({ className, showText = true, size = 'md' }: LogoProps) {
   const s = sizeMap[size]
-  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [state, setState] = useState<LogoState>('loading')
 
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data: { logo_url?: string }) => {
-        if (data.logo_url?.trim()) setLogoUrl(data.logo_url.trim())
+        if (data.logo_url?.trim()) {
+          setState(data.logo_url.trim())
+        } else {
+          setState('none')
+        }
       })
-      .catch(() => {})
+      .catch(() => setState('none'))
   }, [])
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {logoUrl ? (
-        <span
-          className="inline-block flex-shrink-0 bg-transparent"
-          style={{ width: s, height: s }}
-        >
-          <img
-            src={logoUrl}
-            alt="Logo"
-            width={s}
-            height={s}
-            className="block w-full h-full object-contain"
-            style={{ display: 'block' }}
-          />
-        </span>
-      ) : (
+      <span
+        className="inline-block flex-shrink-0 bg-transparent"
+        style={{ width: s, height: s }}
+        aria-hidden
+      >
+        {state === 'loading' && <span className="block w-full h-full bg-luxe-gray/30 rounded animate-pulse" style={{ minWidth: s, minHeight: s }} />}
+        {state === 'none' && (
         <svg
           width={s}
           height={s}
@@ -76,9 +74,21 @@ export function Logo({ className, showText = true, size = 'md' }: LogoProps) {
             d="M24 5c16 9 18 23 12 35-4 5-14 5-20 1-8-6-10-22-2-31 4-4 4-5 10-5z"
           />
         </svg>
-      )}
+        )}
+        {state !== 'loading' && state !== 'none' && (
+          <img
+            src={state}
+            alt="Logo"
+            width={s}
+            height={s}
+            className="block w-full h-full object-contain"
+            style={{ display: 'block' }}
+            fetchPriority="high"
+          />
+        )}
+      </span>
       {showText && (
-        <span className="text-xl font-bold text-white hidden sm:block tracking-tight">
+        <span className="text-base sm:text-xl font-bold text-white block tracking-tight truncate max-w-[160px] sm:max-w-none">
           Premium Headshop
         </span>
       )}

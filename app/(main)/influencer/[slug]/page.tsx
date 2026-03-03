@@ -32,6 +32,7 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
       const { data: productsData } = await supabase
         .from('products')
         .select('*')
+        .eq('is_active', true)
         .eq('influencer_id', influencerData.id)
 
       if (productsData && productsData.length > 0) {
@@ -63,33 +64,60 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
     )
   }
 
+  const socialLinks = influencer.social_links || {}
+  const promoLink = (socialLinks as { promo_link?: string }).promo_link?.trim() || undefined
+
   return (
-    <div className="min-h-screen bg-luxe-black">
-      {/* Hero Banner */}
-      <section className="relative h-[60vh] md:h-[70vh] overflow-hidden">
-        {/* Background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(135deg, ${influencer.accent_color}20 0%, transparent 100%)`,
-          }}
-        >
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-            className="absolute inset-0 opacity-10"
-            style={{
-              background: `radial-gradient(circle, ${influencer.accent_color} 1px, transparent 1px)`,
-              backgroundSize: '30px 30px',
-            }}
-          />
+    <div className="influencer-profile-page min-h-screen bg-luxe-black">
+      {/* Hero Banner – mit optionalem Banner-Bild im Hintergrund oder Werbefläche */}
+      <section className="influencer-hero-banner relative h-[60vh] md:h-[70vh] overflow-hidden">
+        {/* Hintergrund: eigenes Banner-Bild oder Farbverlauf */}
+        <div className="absolute inset-0">
+          {influencer.banner_url?.trim() ? (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: `url(${influencer.banner_url})` }}
+              />
+              <div
+                className="influencer-hero-overlay absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0.5) 50%, transparent 100%)`,
+                }}
+              />
+              <div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  background: `linear-gradient(135deg, ${influencer.accent_color}40 0%, transparent 100%)`,
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${influencer.accent_color}20 0%, transparent 100%)`,
+                }}
+              />
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 90, 0],
+                }}
+                transition={{
+                  duration: 20,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+                className="absolute inset-0 opacity-10"
+                style={{
+                  background: `radial-gradient(circle, ${influencer.accent_color} 1px, transparent 1px)`,
+                  backgroundSize: '30px 30px',
+                }}
+              />
+            </>
+          )}
         </div>
 
         {/* Content */}
@@ -101,12 +129,20 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col md:flex-row items-center md:items-end gap-8 mb-8"
               >
-                {/* Avatar */}
+                {/* Avatar: eigenes Bild oder Initial */}
                 <div
-                  className="w-32 h-32 md:w-48 md:h-48 rounded-full bg-luxe-gray border-4 border-luxe-charcoal flex items-center justify-center text-6xl md:text-8xl font-bold shadow-2xl"
+                  className="w-32 h-32 md:w-48 md:h-48 rounded-full bg-luxe-gray border-4 border-luxe-charcoal flex items-center justify-center text-6xl md:text-8xl font-bold shadow-2xl overflow-hidden shrink-0"
                   style={{ color: influencer.accent_color }}
                 >
-                  {influencer.name.charAt(0)}
+                  {influencer.avatar_url?.trim() ? (
+                    <img
+                      src={influencer.avatar_url}
+                      alt={influencer.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    influencer.name.charAt(0)
+                  )}
                 </div>
 
                 {/* Info */}
@@ -115,9 +151,9 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
                     {influencer.name}
                   </h1>
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                    {influencer.social_links.instagram && (
+                    {(socialLinks as { instagram?: string }).instagram && (
                       <a
-                        href={influencer.social_links.instagram}
+                        href={(socialLinks as { instagram?: string }).instagram}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-luxe-charcoal hover:bg-luxe-gray rounded-full transition-colors"
@@ -125,6 +161,22 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
                         <Instagram className="w-5 h-5" style={{ color: influencer.accent_color }} />
                         <span className="text-white font-medium">Follow auf Instagram</span>
                         <ExternalLink className="w-4 h-4 text-luxe-silver" />
+                      </a>
+                    )}
+                    {promoLink && (
+                      <a
+                        href={promoLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full transition-colors border-2"
+                        style={{
+                          backgroundColor: `${influencer.accent_color}20`,
+                          borderColor: influencer.accent_color,
+                          color: influencer.accent_color,
+                        }}
+                      >
+                        <span className="font-medium">Mehr von mir / Werbung</span>
+                        <ExternalLink className="w-4 h-4" />
                       </a>
                     )}
                   </div>
@@ -145,7 +197,7 @@ export default function InfluencerPage({ params }: { params: { slug: string } })
 
         {/* Accent Line */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-1"
+          className="influencer-hero-accent absolute bottom-0 left-0 right-0 h-1"
           style={{ backgroundColor: influencer.accent_color }}
         />
       </section>

@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Instagram, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
 import { Influencer } from '@/lib/types'
 
 export function InfluencerGrid() {
@@ -13,15 +11,9 @@ export function InfluencerGrid() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from('influencers')
-        .select('*')
-        .eq('show_on_homepage', true)
-        .eq('is_active', true)
-        .order('homepage_order', { ascending: true, nullsFirst: false })
-      if (data && data.length > 0) {
-        setInfluencers(data as Influencer[])
-      }
+      const res = await fetch('/api/homepage-influencers')
+      const data = await res.json().catch(() => [])
+      setInfluencers(Array.isArray(data) ? (data as Influencer[]) : [])
     }
     load()
   }, [])
@@ -29,32 +21,33 @@ export function InfluencerGrid() {
   if (influencers.length === 0) return null
 
   return (
-    <section className="section-padding bg-luxe-black">
+    <section className="section-padding section-mint">
       <div className="container-luxe">
         {/* Section Header */}
         <div className="text-center mb-16 space-y-4">
           <motion.span
-            initial={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-luxe-neon uppercase text-sm font-semibold tracking-wider"
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5 }}
+            className="text-gradient-flow uppercase text-sm font-semibold tracking-wider"
           >
             Unsere Influencer
           </motion.span>
           <motion.h2
-            initial={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, delay: 0.08 }}
             className="text-4xl md:text-5xl font-bold text-white"
           >
             Von Influencern kuratiert
           </motion.h2>
           <motion.p
-            initial={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, delay: 0.12 }}
             className="text-luxe-silver text-lg max-w-2xl mx-auto"
           >
             Entdecke exklusive Produktlinien deiner Lieblings-Content Creator
@@ -70,14 +63,14 @@ export function InfluencerGrid() {
             return (
             <motion.div
               key={influencer.id}
-              initial={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              viewport={{ once: true, margin: '-30px' }}
+              transition={{ duration: 0.45, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               <div 
                 onClick={() => window.location.href = `/influencer/${influencer.slug}`}
-                className="group relative overflow-hidden rounded-2xl border border-luxe-gray bg-luxe-charcoal hover:border-luxe-gold/50 transition-all duration-300 cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl border border-luxe-gray bg-luxe-charcoal hover:border-luxe-gold/50 hover:shadow-xl hover:shadow-luxe-gold/5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
               >
                 {/* Banner Background */}
                 <div className="h-48 relative bg-gradient-to-br from-luxe-gray to-luxe-charcoal overflow-hidden">

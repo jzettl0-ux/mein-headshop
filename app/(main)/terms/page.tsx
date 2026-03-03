@@ -1,12 +1,45 @@
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { FileDown } from 'lucide-react'
+import { getCompanyInfoAsync } from '@/lib/company'
+import { getLegalContent } from '@/lib/legal-content'
+import { LegalContentRender } from '@/components/legal-content-render'
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const legal = await getLegalContent('terms')
+  if (legal?.content) {
+    return (
+      <div className="min-h-screen bg-luxe-black py-12">
+        <div className="container-luxe max-w-4xl">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <h1 className="text-4xl font-bold text-white">{legal.title}</h1>
+            <Button variant="outline" className="border-luxe-gold text-luxe-gold hover:bg-luxe-gold/10" asChild>
+              <a href="/api/legal/agb" download="AGB.pdf">
+                <FileDown className="w-4 h-4 mr-2" />
+                AGB als PDF herunterladen
+              </a>
+            </Button>
+          </div>
+          <LegalContentRender title="" content={legal.content} />
+        </div>
+      </div>
+    )
+  }
+  const company = await getCompanyInfoAsync()
   return (
     <div className="min-h-screen bg-luxe-black py-12">
       <div className="container-luxe max-w-4xl">
-        <h1 className="text-4xl font-bold text-white mb-8">
-          Allgemeine Geschäftsbedingungen (AGB)
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <h1 className="text-4xl font-bold text-white">
+            Allgemeine Geschäftsbedingungen (AGB)
+          </h1>
+          <Button variant="outline" className="border-luxe-gold text-luxe-gold hover:bg-luxe-gold/10" asChild>
+            <a href="/api/legal/agb" download="AGB.pdf">
+              <FileDown className="w-4 h-4 mr-2" />
+              AGB als PDF herunterladen
+            </a>
+          </Button>
+        </div>
 
         <Card className="bg-luxe-charcoal border-luxe-gray">
           <CardContent className="pt-6 space-y-6 text-luxe-silver">
@@ -14,7 +47,7 @@ export default function TermsPage() {
               <h2 className="text-xl font-bold text-white mb-3">§ 1 Geltungsbereich & Altersbeschränkung</h2>
               <p className="leading-relaxed">
                 (1) Diese Allgemeinen Geschäftsbedingungen gelten für alle Verträge über die Lieferung von 
-                Waren, die zwischen Premium Headshop GmbH (nachfolgend "Verkäufer") und dem Kunden 
+                Waren, die zwischen {company.name} (nachfolgend "Verkäufer") und dem Kunden 
                 (nachfolgend "Kunde") geschlossen werden.<br /><br />
                 
                 (2) <strong className="text-red-400">🔞 WICHTIG:</strong> Der Verkauf richtet sich ausschließlich 
@@ -101,7 +134,9 @@ export default function TermsPage() {
             <div>
               <h2 className="text-xl font-bold text-white mb-3">§ 8 Gewährleistung</h2>
               <p className="leading-relaxed">
-                Es gelten die gesetzlichen Gewährleistungsrechte.
+                Es gelten die gesetzlichen Gewährleistungsrechte (z. B. 2 Jahre bei Verbraucherkäufen). 
+                Ab dem 27.09.2026 ist das EU-einheitliche Gewährleistungs- und Garantielabel im Online-Handel Pflicht; 
+                Details siehe unsere Seite Widerrufsrecht / Gewährleistung.
               </p>
             </div>
 
@@ -115,8 +150,8 @@ export default function TermsPage() {
 
             <div className="pt-6 border-t border-luxe-gray">
               <p className="text-sm">
-                Stand: {new Date().toLocaleDateString('de-DE')}<br />
-                Premium Headshop GmbH
+                Rechtlicher Stand: 20.02.2026<br />
+                {company.name}
               </p>
             </div>
           </CardContent>

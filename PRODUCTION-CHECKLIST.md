@@ -36,10 +36,15 @@ NEXT_PUBLIC_SUPABASE_URL=https://tqjjjnvuuxcqrwxmhgkn.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=[Dein Key]
 NEXT_PUBLIC_SITE_URL=https://deine-domain.com
 
-# Optional:
+# Erforderlich für Vollbetrieb:
 SUPABASE_SERVICE_ROLE_KEY=[Für Admin-Ops]
-STRIPE_SECRET_KEY=[Für Payment]
+MOLLIE_API_KEY=[Live-Key von Mollie]
 RESEND_API_KEY=[Für Emails]
+
+# Cron-Jobs (Vercel Cron oder externer Service):
+CRON_SECRET=[zufälliger String für Cron-Routen]
+
+# Optional: reCAPTCHA, DHL, etc. – siehe .env.local.example
 ```
 
 ### Vercel Deployment:
@@ -58,10 +63,10 @@ RESEND_API_KEY=[Für Emails]
 - [ ] Widerrufsbelehrung erstellen
 
 ### DSGVO:
-- [ ] Cookie-Banner implementieren (falls Cookies genutzt werden)
+- [x] Cookie-Banner (ConsentBanner.tsx, cookie_consent_v3)
 - [ ] Datenschutz-Einstellungen
-- [ ] Datenexport-Funktion für User
-- [ ] Daten-Löschung-Funktion
+- [x] Datenexport-Funktion für User (`/profile/privacy` → Meine Daten anfordern)
+- [x] Daten-Löschung-Funktion (GDPR delete request + Bestätigung per Link)
 
 ### Jugendschutz:
 - [x] Age-Gate implementiert
@@ -73,12 +78,12 @@ RESEND_API_KEY=[Für Emails]
 
 ## 4️⃣ PAYMENT-INTEGRATION
 
-### Stripe/PayPal:
-- [ ] Account erstellt
-- [ ] API-Keys konfiguriert
-- [ ] Webhook-Endpoint erstellt
+### Mollie:
+- [ ] Mollie-Account erstellt & verifiziert
+- [ ] MOLLIE_API_KEY (live) gesetzt
+- [ ] Webhook-URL: `https://deine-domain.de/api/payment/webhook` (normale Zahlungen + Split-Payment-Teilzahlungen)
 - [ ] Test-Zahlungen durchgeführt
-- [ ] Refund-System implementiert
+- [x] Refund-System implementiert (Mollie API in process-return, Gutschrift-PDF, payment_status=refunded)
 
 ### Rechnungen:
 - [ ] PDF-Generation implementiert
@@ -229,6 +234,21 @@ RESEND_API_KEY=[Für Emails]
 
 ---
 
+## 1️⃣0️⃣1️⃣ CRON-JOBS (Blueprint-Features)
+
+### Routen (GET mit ?secret=CRON_SECRET):
+- [ ] `/api/cron/refresh-fbt` – FBT-Aggregation (täglich 3:00)
+- [ ] `/api/cron/refresh-asin-locks` – ASIN-Locks (täglich 3:30)
+- [ ] `/api/cron/refresh-vault-drops` – Vault-Drop-Status (alle 15 Min)
+- [ ] `/api/cron/notify-drop-radar` – Drop-Radar Restock-E-Mails (alle 30 Min)
+- [ ] `/api/cron/refresh-vendor-metrics` – Vendor-Metriken
+- [ ] `/api/cron/check-tracking` – DHL Tracking-Sync
+- [ ] `/api/cron/auto-cancel-unpaid` – Storno unbezahlter Bestellungen
+
+**Vercel Cron:** Zeitpläne sind in `vercel.json` definiert. Da die Cron-Routen `?secret=CRON_SECRET` erwarten und Vercel keine Query-Parameter mitsendet, empfiehlt sich ein externer Dienst wie [cron-job.org](https://cron-job.org): `https://deine-domain.de/api/cron/refresh-fbt?secret=DEIN_CRON_SECRET` usw.
+
+---
+
 ## 1️⃣1️⃣ ANALYTICS & MONITORING
 
 ### Analytics:
@@ -238,7 +258,7 @@ RESEND_API_KEY=[Für Emails]
 - [ ] Event-Tracking
 
 ### Monitoring:
-- [ ] Error-Tracking (Sentry)
+- [x] Error-Tracking (Sentry) – optional: NEXT_PUBLIC_SENTRY_DSN setzen
 - [ ] Uptime-Monitoring
 - [ ] Performance-Monitoring
 - [ ] Log-Aggregation
@@ -299,25 +319,32 @@ RESEND_API_KEY=[Für Emails]
    ⚠️ Alle Dienste aufgeführt?
    ```
 
-3. **Payment-System aktiv**
+3. **Payment-System aktiv (Mollie)**
    ```
-   ❌ Mock-Checkout
-   ✅ Echte Zahlungen
+   ❌ Test-Modus
+   ✅ Live MOLLIE_API_KEY, Webhook konfiguriert
    ```
 
-4. **Echte Produktfotos**
+4. **Blueprint-Features (bereits implementiert)**
+   ```
+   ✅ 4:20 Vault, Drop-Radar (Restock-E-Mails), Price Lock
+   ✅ Gamified Cart (Loyalty-Fortschritt), Split Payment (Rechnung teilen)
+   ✅ Secret Shop (Loyalty-gated Kategorien), Mollie Refund bei Retouren
+   ```
+
+5. **Echte Produktfotos**
    ```
    ❌ Unsplash-Placeholder
    ✅ Eigene Produktfotos
    ```
 
-5. **Email-Versand aktiv**
+6. **Email-Versand aktiv**
    ```
    ❌ Keine Emails
    ✅ Bestellbestätigungen automatisch
    ```
 
-6. **Domain & SSL**
+7. **Domain & SSL**
    ```
    ❌ localhost
    ✅ https://deine-domain.de
@@ -382,4 +409,13 @@ git push origin main
 **Status aktuell:** 🟡 Development-Ready  
 **Status Ziel:** 🟢 Production-Ready  
 
-**Fortschritt:** 85% ✅ (15% = Payment + Emails + Rechtliches finalisieren)
+**Fortschritt:** ~90% ✅  
+
+**Implementiert:** Blueprint-Features (Vault, Drop-Radar, Price Lock, FBT, Gamified Cart, Split Payment, Secret Shop), Mollie Refund, Cron-Routen, Admin-UI für EPR/Blended/Percolate/FBT.
+
+**Verbleibend vor Go-Live:**
+1. Mollie Live-Key + Webhook-URL
+2. E-Mail-Domain bei Resend verifizieren
+3. Rechtliches (Impressum, AGB, Datenschutz) mit echten Daten
+4. Cron-Jobs bei [cron-job.org](https://cron-job.org) mit `?secret=CRON_SECRET` einrichten
+5. Blueprint-Migrations im Supabase SQL Editor ausführen (Reihenfolge: `docs/BLUEPRINT-MASTER.md` oder `docs/BLUEPRINT-PHASEN-PLAN.md` – alle Phasen 0–15)

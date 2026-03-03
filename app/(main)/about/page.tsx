@@ -34,7 +34,7 @@ export default function AboutPage() {
         {/* Hero */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            Über <span className="text-gradient-gold">Premium Headshop</span>
+            <span className="text-gradient-flow">Über</span> <span className="text-gradient-flow">Premium Headshop</span>
           </h1>
           <p className="text-xl text-luxe-silver leading-relaxed">
             Deine erste Adresse für hochwertiges Cannabis-Zubehör. 
@@ -57,8 +57,9 @@ export default function AboutPage() {
               uns persönlich geprüft und für gut befunden.
             </p>
             <p className="text-luxe-silver leading-relaxed text-lg">
-              Ob Glasbongs, Grinder oder Vaporizer - bei uns findest du nur Premium-Qualität. 
-              Diskret verpackt und schnell geliefert. Mit Liebe zum Detail und Respekt für die Community.
+              Ob Glasbongs, Grinder oder Vaporizer – bei uns findest du nur Premium-Qualität. 
+              Diskret verpackt und schnell geliefert. Mit Liebe zum Detail und Respekt für die Community. 
+              Für alle, die Qualität schätzen und ihr Ritual ernst nehmen.
             </p>
           </CardContent>
         </Card>
@@ -107,6 +108,16 @@ export default function AboutPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Bewertungen CTA */}
+        <div className="text-center mt-12 mb-8">
+          <Link
+            href="/bewertungen"
+            className="inline-flex items-center gap-2 text-luxe-gold hover:underline font-medium"
+          >
+            Was unsere Kunden sagen – alle Bewertungen ansehen
+          </Link>
+        </div>
 
         {/* CTA */}
         <div className="text-center mt-16">

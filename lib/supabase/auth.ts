@@ -1,14 +1,12 @@
 import { supabase } from '@/lib/supabase'
-
-// Admin E-Mail - nur diese E-Mail hat Admin-Zugriff
-export const ADMIN_EMAIL = 'jzettl0@gmail.com'
+import { OWNER_EMAIL } from '@/lib/owner-email'
 
 /**
- * Prüft ob der aktuelle User ein Admin ist
+ * Prüft ob der aktuelle User Inhaber ist (volle Admin-Rechte ohne Staff-Eintrag).
  */
 export async function isAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
-  return user?.email === ADMIN_EMAIL
+  return user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()
 }
 
 /**
@@ -55,4 +53,24 @@ export function onAuthStateChange(callback: (user: any) => void) {
   return supabase.auth.onAuthStateChange((_event, session) => {
     callback(session?.user ?? null)
   })
+}
+
+/**
+ * Passwort-zurücksetzen-Mail anfordern („Passwort vergessen“).
+ * redirectTo = URL, an der der Nutzer nach Klick auf den Link landet (z. B. /login/set-password).
+ */
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectTo.startsWith('http') ? redirectTo : undefined,
+  })
+  if (error) throw error
+}
+
+/**
+ * Neues Passwort setzen (nach Einladung oder Passwort-Reset).
+ * Nur gültig, wenn die Session durch Einladungs- oder Reset-Link entstanden ist.
+ */
+export async function updatePassword(password: string) {
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw error
 }

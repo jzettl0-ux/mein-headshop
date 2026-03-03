@@ -9,18 +9,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 /**
- * Supabase Client für Client-Side Operations
- * Cookie-Options für lange Session (7 Tage), gleiche Konfiguration wie Middleware
+ * Supabase Client für Client-Side Operations.
+ * Ohne maxAge = Session-Cookie (Abmeldung beim Schließen des Browsers).
+ * Mit NEXT_PUBLIC_SESSION_MAX_AGE_MINUTES = Abmeldung nach X Min. Inaktivität (muss mit SESSION_MAX_AGE_MINUTES übereinstimmen).
  */
+function getCookieOptions(): { path: string; sameSite: 'lax'; maxAge?: number } {
+  const path = '/'
+  const sameSite = 'lax' as const
+  const raw = process.env.NEXT_PUBLIC_SESSION_MAX_AGE_MINUTES
+  const minutes = raw !== undefined && raw !== '' ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(minutes) && minutes > 0) {
+    return { path, sameSite, maxAge: minutes * 60 }
+  }
+  return { path, sameSite }
+}
+
 export const supabase = createBrowserClient(
   supabaseUrl,
   supabaseAnonKey,
   {
-    cookieOptions: {
-      path: '/',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 Tage (in Sekunden)
-    },
+    cookieOptions: getCookieOptions(),
   }
 )
 
@@ -42,6 +50,7 @@ export async function getProducts(filters?: {
   let query = supabase
     .from('products')
     .select('*, influencers(*)')
+    .eq('is_active', true)
     .order('created_at', { ascending: false })
 
   if (filters?.category) {
@@ -79,6 +88,7 @@ export async function getProductBySlug(slug: string) {
     .from('products')
     .select('*, influencers(*)')
     .eq('slug', slug)
+    .eq('is_active', true)
     .single()
 
   if (error) {
@@ -93,6 +103,7 @@ export async function getFeaturedProducts(limit = 8) {
   const { data, error } = await supabase
     .from('products')
     .select('*, influencers(*)')
+    .eq('is_active', true)
     .eq('is_featured', true)
     .limit(limit)
 
@@ -143,6 +154,7 @@ export async function getInfluencerProducts(influencerId: string) {
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('is_active', true)
     .eq('influencer_id', influencerId)
     .order('created_at', { ascending: false })
 
@@ -262,6 +274,29 @@ export async function uploadSiteLogo(file: File): Promise<string> {
 
   if (uploadError) {
     console.error('Error uploading site logo:', uploadError)
+    throw uploadError
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('site-assets')
+    .getPublicUrl(fileName)
+
+  return publicUrl
+}
+
+/**
+ * Bild für eine Startseiten-Kategorie hochladen (site-assets/categories/).
+ */
+export async function uploadCategoryImage(file: File, categoryId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png'
+  const fileName = `categories/${categoryId}-${Date.now()}.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('site-assets')
+    .upload(fileName, file, { upsert: false })
+
+  if (uploadError) {
+    console.error('Error uploading category image:', uploadError)
     throw uploadError
   }
 

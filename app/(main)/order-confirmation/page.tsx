@@ -1,16 +1,52 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Check, Package, Mail, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Check, Package, Mail, ArrowRight, Sparkles, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { SPRUECHE_BESTELLUNG_ERFOLG, getRandomSpruch } from '@/lib/kiffer-sprueche'
 
 export default function OrderConfirmationPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const orderNumber = searchParams.get('order')
+  const [validationState, setValidationState] = useState<'pending' | 'valid' | 'invalid'>('pending')
+  const [approvalPending, setApprovalPending] = useState(false)
+
+  useEffect(() => {
+    if (!orderNumber?.trim()) {
+      router.replace('/account')
+      return
+    }
+    const fromUrl = searchParams.get('approval_pending') === '1'
+    fetch(`/api/order-confirmation/validate?order=${encodeURIComponent(orderNumber)}`, { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.valid === true) {
+          setValidationState('valid')
+          setApprovalPending(fromUrl || data.approval_pending === true)
+        } else {
+          router.replace(`/payment/success?order=${encodeURIComponent(orderNumber)}`)
+        }
+      })
+      .catch(() => router.replace('/account'))
+  }, [orderNumber, router, searchParams])
+
+  const spruch = useMemo(
+    () => getRandomSpruch(SPRUECHE_BESTELLUNG_ERFOLG, orderNumber ?? undefined),
+    [orderNumber]
+  )
+
+  if (validationState !== 'valid') {
+    return (
+      <div className="min-h-screen bg-luxe-black flex items-center justify-center p-4" role="status" aria-live="polite">
+        <Loader2 className="w-12 h-12 text-luxe-gold animate-spin" aria-hidden="true" />
+        <span className="sr-only">Bestellung wird geprüft…</span>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-luxe-black flex items-center justify-center p-4">
@@ -33,18 +69,35 @@ export default function OrderConfirmationPage() {
 
             {/* Title */}
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Bestellung erfolgreich!
+              {approvalPending ? 'Bestellung erstellt – Freigabe ausstehend' : 'Bestellung erfolgreich!'}
             </h1>
             <p className="text-luxe-silver text-lg mb-8">
-              Vielen Dank für deine Bestellung bei Premium Headshop
+              {approvalPending
+                ? 'Deine Bestellung wurde erstellt und wartet auf Freigabe durch deinen Einkaufsverantwortlichen. Du erhältst eine E-Mail, sobald die Freigabe erteilt wurde und die Zahlung freigeschaltet ist.'
+                : 'Vielen Dank für deine Bestellung bei Premium Headshop. Wir kümmern uns um den Rest – du kannst dich auf Qualität freuen.'}
             </p>
 
             {/* Order Number */}
             {orderNumber && (
-              <div className="inline-block mb-8 px-6 py-3 bg-luxe-gray rounded-lg border border-luxe-silver/30">
+              <div className="inline-block mb-6 px-6 py-3 bg-luxe-gray rounded-lg border border-luxe-silver/30">
                 <p className="text-sm text-luxe-silver mb-1">Deine Bestellnummer</p>
                 <p className="text-2xl font-bold text-luxe-gold">{orderNumber}</p>
               </div>
+            )}
+
+            {/* Lustiger Spruch zur Bestellung */}
+            {spruch && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mb-8 px-6 py-4 rounded-xl bg-luxe-primary/15 border border-luxe-primary/30 text-center"
+              >
+                <Sparkles className="w-5 h-5 text-luxe-primary mx-auto mb-2 opacity-80" />
+                <p className="text-luxe-primary font-medium text-sm md:text-base italic">
+                  „{spruch}"
+                </p>
+              </motion.div>
             )}
 
             {/* Info Boxes */}
@@ -52,10 +105,10 @@ export default function OrderConfirmationPage() {
               <div className="p-6 bg-luxe-gray rounded-lg text-left">
                 <Mail className="w-8 h-8 text-luxe-gold mb-3" />
                 <h3 className="text-white font-semibold mb-2">
-                  Bestätigung per E-Mail
+                  {approvalPending ? 'E-Mail an dich' : 'Bestätigung per E-Mail'}
                 </h3>
                 <p className="text-sm text-luxe-silver">
-                  Du erhältst in Kürze eine Bestellbestätigung an deine E-Mail-Adresse.
+                  {approvalPending ? 'Du hast eine E-Mail erhalten. Sobald die Freigabe erfolgt, erhältst du den Zahlungslink.' : 'Du erhältst in Kürze eine Bestellbestätigung an deine E-Mail-Adresse.'}
                 </p>
               </div>
               <div className="p-6 bg-luxe-gray rounded-lg text-left">

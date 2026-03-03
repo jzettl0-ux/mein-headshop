@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Upload, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,16 @@ const PRESET_COLORS = [
   { name: 'Pink', value: '#FF1493' },
   { name: 'Cyan', value: '#00FFFF' },
   { name: 'Lila', value: '#9D4EDD' },
+  { name: 'Türkis', value: '#00CED1' },
+  { name: 'Koralle', value: '#FF7F50' },
+  { name: 'Minze', value: '#98FF98' },
+  { name: 'Gelb', value: '#FFD700' },
+  { name: 'Rot', value: '#E63946' },
+  { name: 'Blau', value: '#4361EE' },
+  { name: 'Violett', value: '#7B2CBF' },
+  { name: 'Rosa', value: '#F72585' },
+  { name: 'Bernstein', value: '#FFBF69' },
+  { name: 'Hellgrün', value: '#06D6A0' },
 ]
 
 export default function NewInfluencerPage() {
@@ -39,8 +49,49 @@ export default function NewInfluencerPage() {
     instagram: '',
     tiktok: '',
     youtube: '',
+    promo_link: '',
     is_active: true,
   })
+  const [shopColors, setShopColors] = useState<{ name: string; value: string }[]>([])
+  const [savingAsDefault, setSavingAsDefault] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data: Record<string, string>) => {
+        const out: { name: string; value: string }[] = []
+        const skip = new Set(['logo_url', 'homepage_influencer_limit'])
+        for (const [key, value] of Object.entries(data)) {
+          if (skip.has(key) || !value || !/^#[0-9A-Fa-f]{6}$/i.test(value)) continue
+          out.push({ name: `Shop: ${key}`, value })
+        }
+        setShopColors(out)
+      })
+      .catch(() => {})
+  }, [])
+
+  const saveAsShopDefault = async () => {
+    setSavingAsDefault(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primary: formData.accent_color, accent: formData.accent_color }),
+      })
+      if (!res.ok) throw new Error('Speichern fehlgeschlagen')
+      toast({
+        title: 'Als Shop-Standard gespeichert',
+        description: 'Die gewählte Farbe gilt jetzt shopweit und erscheint in Einstellungen → Branding.',
+      })
+      const root = document.documentElement
+      root.style.setProperty('--luxe-primary', formData.accent_color)
+      root.style.setProperty('--luxe-accent', formData.accent_color)
+    } catch {
+      toast({ title: 'Fehler', description: 'Konnte nicht als Shop-Standard gespeichert werden.', variant: 'destructive' })
+    } finally {
+      setSavingAsDefault(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,6 +109,7 @@ export default function NewInfluencerPage() {
           instagram: formData.instagram || undefined,
           tiktok: formData.tiktok || undefined,
           youtube: formData.youtube || undefined,
+          promo_link: formData.promo_link?.trim() || undefined,
         },
         is_active: formData.is_active,
       }
@@ -306,6 +358,20 @@ export default function NewInfluencerPage() {
                     className="bg-luxe-gray border-luxe-silver text-white"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="promo_link" className="text-white">
+                    Banner-/Werbung-Link (optional)
+                  </Label>
+                  <Input
+                    id="promo_link"
+                    type="url"
+                    value={formData.promo_link}
+                    onChange={(e) => setFormData({ ...formData, promo_link: e.target.value })}
+                    placeholder="https://… (z.B. Instagram, eigene Seite, Aktion)"
+                    className="bg-luxe-gray border-luxe-silver text-white"
+                  />
+                  <p className="text-xs text-luxe-silver mt-1">Erscheint auf dem Profil als Button „Mehr von mir / Werbung“.</p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -316,37 +382,62 @@ export default function NewInfluencerPage() {
             <Card className="bg-luxe-charcoal border-luxe-gray">
               <CardHeader>
                 <CardTitle className="text-white">Branding</CardTitle>
+                <p className="text-sm text-luxe-silver">Akzentfarbe für diesen Influencer. Du kannst die gewählte Farbe auch als Shop-Standard speichern – dann gilt sie für den gesamten Shop.</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-white mb-3 block">
-                    Accent-Color *
-                  </Label>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
+                  <Label className="text-white mb-2 block">Aus Einstellungen (Shop-Farben)</Label>
+                  {shopColors.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {shopColors.map((c) => (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, accent_color: c.value })}
+                          className={`h-10 rounded-lg border-2 transition-all ${formData.accent_color === c.value ? 'border-white scale-105' : 'border-luxe-gray'}`}
+                          style={{ backgroundColor: c.value }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-luxe-silver mb-3">Keine Shop-Farben. Unter Einstellungen → Branding Farben speichern.</p>
+                  )}
+                  <Label className="text-white mb-2 block">Schnellauswahl (16 Farben)</Label>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
                     {PRESET_COLORS.map((color) => (
                       <button
                         key={color.value}
                         type="button"
                         onClick={() => setFormData({ ...formData, accent_color: color.value })}
-                        className={`h-12 rounded-lg border-2 transition-all ${
-                          formData.accent_color === color.value
-                            ? 'border-white scale-105'
-                            : 'border-luxe-gray hover:border-luxe-silver'
+                        className={`h-10 rounded-lg border-2 transition-all ${
+                          formData.accent_color === color.value ? 'border-white scale-105' : 'border-luxe-gray hover:border-luxe-silver'
                         }`}
                         style={{ backgroundColor: color.value }}
                         title={color.name}
                       />
                     ))}
                   </div>
-                  <Input
+                  <Label className="text-white mb-2 block">Eigene Farbe (Hex)</Label>
+                  <input
                     type="color"
                     value={formData.accent_color}
                     onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
-                    className="w-full h-12 bg-luxe-gray border-luxe-silver cursor-pointer"
+                    className="w-12 h-12 rounded border border-luxe-gray cursor-pointer bg-transparent mr-2 align-middle"
                   />
-                  <p className="text-xs text-luxe-silver mt-2">
-                    Ausgewählt: {formData.accent_color}
-                  </p>
+                  <Input
+                    value={formData.accent_color}
+                    onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
+                    className="inline-block bg-luxe-gray border-luxe-gray text-white font-mono max-w-[140px] align-middle"
+                    placeholder="#hex"
+                  />
+                  <p className="text-xs text-luxe-silver mt-2">Ausgewählt: {formData.accent_color}</p>
+                </div>
+                <div className="pt-3 border-t border-luxe-gray">
+                  <Button type="button" variant="outline" size="sm" onClick={saveAsShopDefault} disabled={savingAsDefault} className="border-luxe-gold text-luxe-gold hover:bg-luxe-gold/10 w-full">
+                    {savingAsDefault ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Als Shop-Standard speichern
+                  </Button>
                 </div>
 
                 <div className="pt-4 border-t border-luxe-gray">

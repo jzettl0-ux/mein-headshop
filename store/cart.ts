@@ -59,6 +59,10 @@ export const useCartStore = create<CartState>()(
         set({ items: [] })
       },
 
+      replaceItems: (items: CartItem[]) => {
+        set({ items: items ?? [] })
+      },
+
       getSubtotal: () => {
         const { items } = get()
         return items.reduce(
@@ -68,8 +72,12 @@ export const useCartStore = create<CartState>()(
       },
 
       getShipping: () => {
-        const { items } = get()
-        return calculateShipping(items.map(item => item.product))
+        const { items, getSubtotal } = get()
+        const subtotal = getSubtotal()
+        return calculateShipping(
+          items.map((item) => item.product),
+          subtotal
+        )
       },
 
       getTotal: () => {
@@ -79,7 +87,10 @@ export const useCartStore = create<CartState>()(
 
       hasAdultItems: () => {
         const { items } = get()
-        return items.some((item) => item.product.is_adult_only)
+        return items.some(
+          (item) =>
+            item.product.is_adult_only && !item.product.exempt_from_adult_fee
+        )
       },
     }),
     {

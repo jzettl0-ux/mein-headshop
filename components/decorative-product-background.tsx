@@ -1,122 +1,141 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 
-/* Echtes Hanfblatt (Cannabis) – 7 Finger, typische Form */
-function HanfblattIcon({ className }: { className?: string }) {
+type IconProps = { className?: string }
+
+/* Minimalistische Glas-Bong (Outline) */
+function BongIcon({ className }: IconProps) {
   return (
-    <svg viewBox="0 0 64 80" fill="currentColor" className={className} aria-hidden>
-      {/* Symmetrisches Blatt: Spitze oben, Stiel unten, 3 Zacken links, 3 rechts, 1 Mitte */}
-      <path d="
-        M32 2
-        L36 14 L42 18 L40 26 L44 32 L38 40 L36 52 L32 78
-        L28 52 L26 40 L20 32 L24 26 L22 18 L28 14
-        Z
-      " />
+    <svg viewBox="0 0 48 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M24 68V44" />
+      <path d="M18 44a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v20H18V44z" />
+      <path d="M20 38h8M20 36V32a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v4" />
+      <path d="M24 28V8" />
+      <path d="M22 8h4" />
+      <path d="M38 24l-4 4 2 4" />
+      <circle cx="38" cy="24" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   )
 }
 
-/* Echte Bong – Standfuß, Bauch, Hals, Mundstück, Bowl-Arm mit Kopf */
-function BongIcon({ className }: { className?: string }) {
+/* Stylischer Grinder (Outline, Draufsicht) – gerundete Werte für Hydration-Konsistenz */
+function GrinderIcon({ className }: IconProps) {
+  const round = (n: number) => Math.round(n * 100) / 100
   return (
-    <svg viewBox="0 0 64 80" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      {/* Standfuß (flach) */}
-      <path d="M20 76 L44 76 L42 74 L22 74 Z" />
-      {/* Wasserkammer (runder Bauch) */}
-      <path d="M20 74 Q16 60 20 48 Q24 40 32 40 Q40 40 44 48 Q48 60 44 74" />
-      {/* Hals (Röhre) */}
-      <rect x="28" y="24" width="8" height="20" rx="1" />
-      {/* Mundstück (oberer Rand) */}
-      <path d="M26 24 L38 24" strokeWidth="2.5" />
-      {/* Downstem + Bowl (seitlich abgewinkelt) */}
-      <path d="M44 52 L54 46 L56 42" />
-      <circle cx="56" cy="42" r="4" fill="currentColor" />
-    </svg>
-  )
-}
-
-/* Echter Grinder – Draufsicht: zwei Etagen, Zähne innen */
-function GrinderIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden>
-      {/* Untere Etage (äußerer Ring) */}
-      <circle cx="32" cy="32" r="26" />
-      <circle cx="32" cy="32" r="18" />
-      {/* Zähne (innen, wie bei Grinder) – kleine Rechtecke im Kreis */}
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+    <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className={className} aria-hidden>
+      <circle cx="28" cy="28" r="24" />
+      <circle cx="28" cy="28" r="16" />
+      {[0, 60, 120, 180, 240, 300].map((deg) => {
         const r = (deg * Math.PI) / 180
-        const x = 32 + 20 * Math.cos(r)
-        const y = 32 + 20 * Math.sin(r)
-        return (
-          <rect
-            key={deg}
-            x={x - 3}
-            y={y - 2}
-            width="6"
-            height="4"
-            fill="currentColor"
-            transform={`rotate(${deg} ${x} ${y})`}
-          />
-        )
+        const x = round(28 + 20 * Math.cos(r))
+        const y = round(28 + 20 * Math.sin(r))
+        return <line key={deg} x1={28} y1={28} x2={x} y2={y} />
       })}
-      {/* Mittlerer Bereich (Kief-Sieb) */}
-      <circle cx="32" cy="32" r="8" strokeDasharray="2 2" />
+      <circle cx="28" cy="28" r="6" strokeDasharray="2 1.5" />
     </svg>
   )
 }
 
-const items: { Icon: React.ComponentType<{ className?: string }>; label: string; size: number; x: string; y: string; delay: number; blur: boolean }[] = [
-  { Icon: BongIcon, label: 'Bongs', size: 120, x: '5%', y: '15%', delay: 0, blur: true },
-  { Icon: GrinderIcon, label: 'Grinder', size: 90, x: '88%', y: '25%', delay: 0.5, blur: true },
-  { Icon: HanfblattIcon, label: 'Hanfblatt', size: 80, x: '12%', y: '70%', delay: 1, blur: true },
-  { Icon: BongIcon, label: 'Bongs', size: 100, x: '85%', y: '65%', delay: 0.3, blur: true },
-  { Icon: HanfblattIcon, label: 'Hanfblatt', size: 60, x: '75%', y: '12%', delay: 0.8, blur: true },
-  { Icon: GrinderIcon, label: 'Grinder', size: 70, x: '8%', y: '45%', delay: 0.2, blur: true },
-  { Icon: HanfblattIcon, label: 'Hanfblatt', size: 50, x: '92%', y: '82%', delay: 0.6, blur: true },
-  { Icon: BongIcon, label: 'Bongs', size: 55, x: '25%', y: '88%', delay: 0.4, blur: true },
-  { Icon: GrinderIcon, label: 'Grinder', size: 45, x: '65%', y: '42%', delay: 0.7, blur: true },
-  { Icon: HanfblattIcon, label: 'Hanfblatt', size: 65, x: '42%', y: '18%', delay: 0.1, blur: true },
+/* Elegantes Hanfblatt, 7 Finger (Outline) */
+function HanfblattIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 52 72" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M26 68 L26 48 L20 42 L14 36 L18 28 L12 22 L26 4 L40 22 L34 28 L38 36 L32 42 L26 48 Z" />
+    </svg>
+  )
+}
+
+/* Dünner Joint (Outline) */
+function JointIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 80" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className={className} aria-hidden>
+      <path d="M12 76V12" />
+      <path d="M10 12h4" />
+      <path d="M12 8c-1 0-2 .5-2 2v2c0 1.5 1 2 2 2s2-.5 2-2v-2c0-1.5-1-2-2-2z" />
+      <path d="M8 20l2 4 2-4 2 4" strokeWidth="0.9" opacity="0.8" />
+    </svg>
+  )
+}
+
+/* Positionen vor allem am Bildschirmrand (links/rechts), Opacity 5–10 %, Parallax */
+const ICONS = [
+  { Icon: BongIcon, size: 96, x: '4%', y: '10%', parallax: 0.03 },
+  { Icon: GrinderIcon, size: 80, x: '90%', y: '14%', parallax: -0.02 },
+  { Icon: HanfblattIcon, size: 72, x: '2%', y: '72%', parallax: 0.04 },
+  { Icon: JointIcon, size: 56, x: '92%', y: '58%', parallax: -0.03 },
+  { Icon: BongIcon, size: 64, x: '88%', y: '6%', parallax: 0.02 },
+  { Icon: HanfblattIcon, size: 52, x: '3%', y: '38%', parallax: -0.04 },
+  { Icon: GrinderIcon, size: 58, x: '91%', y: '82%', parallax: 0.025 },
+  { Icon: JointIcon, size: 48, x: '6%', y: '24%', parallax: -0.02 },
+  { Icon: HanfblattIcon, size: 44, x: '94%', y: '44%', parallax: 0.035 },
+  { Icon: BongIcon, size: 50, x: '5%', y: '52%', parallax: -0.025 },
+  { Icon: JointIcon, size: 42, x: '88%', y: '28%', parallax: 0.02 },
+  { Icon: GrinderIcon, size: 48, x: '93%', y: '66%', parallax: -0.03 },
 ]
 
+/**
+ * Wasserzeichen-Hintergrund für helles Design: Bong, Grinder, Hanfblatt, Joint.
+ * Sehr helles Grau / zartes Gold, 5–10 % Opacity, leichter Blur, Parallax beim Scrollen.
+ */
 export function DecorativeProductBackground() {
+  const { scrollYProgress } = useScroll()
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+      className="decorative-product-bg fixed inset-0 pointer-events-none overflow-hidden -z-10"
       aria-hidden
     >
-      {/* Sanfter Verlauf für Tiefe */}
-      <div className="absolute inset-0 bg-gradient-to-br from-luxe-primary/10 via-transparent to-luxe-accent/10" />
-      {/* Kiffer-Motive: Hanfblatt, Bong, Grinder – eigene SVGs */}
-      {items.map(({ Icon, size, x, y, delay, blur }, i) => (
-        <motion.div
+      {ICONS.map(({ Icon, size, x, y, parallax }, i) => (
+        <ParallaxIcon
           key={`${i}-${x}-${y}`}
-          className="absolute opacity-[0.08] text-luxe-primary"
-          style={{
-            left: x,
-            top: y,
-            width: size,
-            height: size,
-            filter: blur ? 'blur(2px)' : undefined,
-          }}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{
-            opacity: [0.08, 0.14, 0.08],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{
-            duration: 8 + i * 0.5,
-            repeat: Infinity,
-            delay: delay * 2,
-            ease: 'easeInOut',
-          }}
-        >
-          <Icon className="w-full h-full" />
-        </motion.div>
+          Icon={Icon}
+          size={size}
+          x={x}
+          y={y}
+          parallax={parallax}
+          scrollYProgress={scrollYProgress}
+          delay={i * 0.12}
+        />
       ))}
-      {/* Weiche Lichtkreise für Atmosphäre */}
-      <div className="absolute top-0 right-0 w-[50vw] h-[50vw] rounded-full bg-luxe-primary/10 blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] rounded-full bg-luxe-accent/10 blur-3xl" />
     </div>
+  )
+}
+
+function ParallaxIcon({
+  Icon,
+  size,
+  x,
+  y,
+  parallax,
+  scrollYProgress,
+  delay,
+}: {
+  Icon: React.ComponentType<IconProps>
+  size: number
+  x: string
+  y: string
+  parallax: number
+  scrollYProgress: ReturnType<typeof useScroll>['scrollYProgress']
+  delay: number
+}) {
+  const yOffset = useTransform(scrollYProgress, [0, 1], [0, parallax * 320])
+  return (
+    <motion.div
+      className="absolute decorative-product-icon text-slate-300"
+      style={{
+        left: x,
+        top: y,
+        width: size,
+        height: size,
+        opacity: 0.2,
+        filter: 'blur(0.5px)',
+        y: yOffset,
+      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.2 }}
+      transition={{ duration: 1, delay, ease: 'easeOut' }}
+    >
+      <Icon className="w-full h-full" />
+    </motion.div>
   )
 }

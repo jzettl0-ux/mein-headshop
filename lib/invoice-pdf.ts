@@ -40,11 +40,39 @@ export interface InvoiceOrderData {
   has_adult_items?: boolean
 }
 
+export interface InvoicePdfOptions {
+  /** Logo-URL (öffentlich erreichbar), wird oben links eingebunden */
+  logoUrl?: string
+}
+
+async function embedLogoImage(doc: PDFDocument, logoUrl: string): Promise<{ image: Awaited<ReturnType<PDFDocument['embedPng']>>; width: number; height: number } | null> {
+  try {
+    const res = await fetch(logoUrl, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return null
+    const buf = await res.arrayBuffer()
+    const bytes = new Uint8Array(buf)
+    const contentType = res.headers.get('content-type') || ''
+    let image: Awaited<ReturnType<PDFDocument['embedPng']>>
+    if (contentType.includes('png') || logoUrl.toLowerCase().endsWith('.png')) {
+      image = await doc.embedPng(bytes)
+    } else {
+      image = await doc.embedJpg(bytes)
+    }
+    const w = image.width
+    const h = image.height
+    const maxH = 44
+    const scale = h > maxH ? maxH / h : 1
+    return { image, width: w * scale, height: h * scale }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Erzeugt eine rechtskonforme Rechnung (PDF) gemäß §14 UStG.
- * Enthält: Rechnungsnummer, Datum, Verkäufer/Käufer, Positionen mit MwSt., Steuerbetrag, Gesamt, Zahlungsart, Hinweise.
+ * Nur Pflichtangaben: Verkäufer/Empfänger, USt-IdNr., Datum, Rechnungsnummer, Menge/Art, Netto/Steuer/Gesamt, Zahlungsart.
  */
-export async function generateInvoicePdf(data: InvoiceOrderData): Promise<Uint8Array> {
+export async function generateInvoicePdf(data: InvoiceOrderData, options?: InvoicePdfOptions): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
@@ -54,6 +82,20 @@ export async function generateInvoicePdf(data: InvoiceOrderData): Promise<Uint8A
 
   const company = getCompanyInfo()
 
+  // Logo oben links (falls vorhanden)
+  const logoMaxWidth = 140
+  let companyStartX = MARGIN
+  if (options?.logoUrl?.trim()) {
+    const logoResult = await embedLogoImage(doc, options.logoUrl.trim())
+    if (logoResult) {
+      const drawW = Math.min(logoResult.width, logoMaxWidth)
+      const drawH = (logoResult.height / logoResult.width) * drawW
+      page.drawImage(logoResult.image, { x: MARGIN, y: y - drawH, width: drawW, height: drawH })
+      companyStartX = MARGIN + drawW + 16
+      y -= drawH + LINE_HEIGHT
+    }
+  }
+
   const write = (text: string, opts?: { bold?: boolean; small?: boolean; x?: number }) => {
     const x = opts?.x ?? MARGIN
     const f = opts?.bold ? fontBold : font
@@ -62,29 +104,52 @@ export async function generateInvoicePdf(data: InvoiceOrderData): Promise<Uint8A
     y -= LINE_HEIGHT * (opts?.small ? 0.9 : 1)
   }
 
-  // —— Kopf: Verkäufer (links), Rechnungstitel (rechts) ——
-  write(company.name, { bold: true })
-  write(`${company.address}, ${company.postalCode} ${company.city}`)
-  write(company.country)
-  if (company.vatId) write(`USt-IdNr.: ${company.vatId}`, { small: true })
-  write(company.email, { small: true })
-  if (company.phone) write(company.phone, { small: true })
+  const writeAt = (text: string, x: number, opts?: { bold?: boolean; small?: boolean }) => {
+    const f = opts?.bold ? fontBold : font
+    const size = opts?.small ? FONT_SIZE_SMALL : FONT_SIZE
+    page.drawText(text, { x, y, size, font: f, color: rgb(0, 0, 0) })
+    y -= LINE_HEIGHT * (opts?.small ? 0.9 : 1)
+  }
+
+  /** Zeile rechtsbündig zeichnen (Ende der Zeile am rechten Rand), damit lange Texte nicht aus dem Blatt laufen */
+  const writeRightAligned = (text: string, rightEdge: number, opts?: { bold?: boolean; small?: boolean }) => {
+    const f = opts?.bold ? fontBold : font
+    const size = opts?.small ? FONT_SIZE_SMALL : FONT_SIZE
+    const textWidth = f.widthOfTextAtSize(text, size)
+    const x = Math.max(MARGIN, rightEdge - textWidth)
+    page.drawText(text, { x, y, size, font: f, color: rgb(0, 0, 0) })
+    y -= LINE_HEIGHT * (opts?.small ? 0.9 : 1)
+  }
+
+  // Verkäufer (links bzw. neben Logo)
+  writeAt(company.name, companyStartX, { bold: true })
+  writeAt(`${company.address}, ${company.postalCode} ${company.city}`, companyStartX)
+  writeAt(company.country, companyStartX)
+  if (company.vatId) writeAt(`USt-IdNr.: ${company.vatId}`, companyStartX, { small: true })
+  writeAt(company.email, companyStartX, { small: true })
+  if (company.phone) writeAt(company.phone, companyStartX, { small: true })
 
   y -= LINE_HEIGHT
-  const invoiceTitleX = width - MARGIN - 120
-  page.drawText('RECHNUNG', { x: invoiceTitleX, y, size: 18, font: fontBold, color: rgb(0, 0, 0) })
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: width - MARGIN, y }, thickness: 0.3, color: rgb(0.9, 0.9, 0.9) })
+  y -= LINE_HEIGHT
+  const rightEdge = width - MARGIN
+  const titleWidth = fontBold.widthOfTextAtSize('RECHNUNG', 18)
+  page.drawText('RECHNUNG', { x: rightEdge - titleWidth, y, size: 18, font: fontBold, color: rgb(0, 0, 0) })
   y -= LINE_HEIGHT * 1.5
 
-  // Rechnungsnummer & Datum
+  // Rechnungsnummer & Datum rechtsbündig, damit lange Nummern nicht aus dem Blatt laufen
   const invoiceDate = new Date(data.created_at).toLocaleDateString('de-DE', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   })
-  write(`Rechnungsnummer: ${data.order_number}`, { x: invoiceTitleX })
-  write(`Rechnungsdatum: ${invoiceDate}`, { x: invoiceTitleX })
-  write(`Leistungsdatum: ${invoiceDate}`, { x: invoiceTitleX })
-  y -= LINE_HEIGHT
+  const invoiceNumber = (data.order_number || '').trim() || '–'
+  writeRightAligned(`Rechnungsnummer: ${invoiceNumber}`, rightEdge)
+  writeRightAligned(`Rechnungsdatum: ${invoiceDate}`, rightEdge)
+  writeRightAligned(`Leistungsdatum: ${invoiceDate}`, rightEdge)
+  y -= LINE_HEIGHT * 0.5
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: width - MARGIN, y }, thickness: 0.5, color: rgb(0.6, 0.6, 0.6) })
+  y -= LINE_HEIGHT * 1.5
 
   // —— Rechnungsempfänger (Käufer) ——
   y -= LINE_HEIGHT
@@ -141,7 +206,7 @@ export async function generateInvoicePdf(data: InvoiceOrderData): Promise<Uint8A
   row('Zwischensumme (brutto)', `${data.subtotal.toFixed(2)} €`)
   row('Versandkosten (brutto)', `${data.shipping_cost.toFixed(2)} €`)
   if (discountAmount > 0) row('Rabatt (brutto)', `- ${discountAmount.toFixed(2)} €`)
-  row('Summe netto (z. B. 19 % MwSt.)', `${netTotal.toFixed(2)} €`)
+  row('Summe netto', `${netTotal.toFixed(2)} €`)
   row('Enthaltene MwSt. 19 %', `${vatTotal.toFixed(2)} €`)
   row('Gesamtbetrag (brutto)', `${data.total.toFixed(2)} €`)
   y -= LINE_HEIGHT
@@ -161,13 +226,11 @@ export async function generateInvoicePdf(data: InvoiceOrderData): Promise<Uint8A
 
   drawLine(`Zahlungsart: ${data.payment_method === 'mollie' ? 'Online-Zahlung (Mollie)' : data.payment_method}`)
   y -= 4
-  drawLine('Rechtliche Hinweise', { bold: true })
-  drawLine('Die Ware bleibt bis zur vollständigen Bezahlung unser Eigentum. Diese Rechnung wurde elektronisch erstellt und ist ohne Unterschrift gültig.', { small: true })
+  drawLine('Diese Rechnung wurde elektronisch erstellt und ist ohne Unterschrift gültig.', { small: true })
   if (company.vatId) {
-    drawLine('Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: ' + company.vatId, { small: true })
+    drawLine('USt-IdNr. § 27a UStG: ' + company.vatId, { small: true })
   }
-  drawLine('Widerrufsrecht: Sie haben das Recht, binnen 14 Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.', { small: true })
-  drawLine('Weitere Informationen zu Widerruf und Rückgabe finden Sie in unseren AGB auf der Website.', { small: true })
+  drawLine('Widerrufsrecht: 14 Tage ohne Angabe von Gründen. Details in unseren AGB.', { small: true })
 
   const pdfBytes = await doc.save()
   return pdfBytes

@@ -1,18 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ShoppingBag, User, MapPin, Check, AlertCircle, Loader2, TicketPercent } from 'lucide-react'
+import { ShoppingBag, User, MapPin, Check, AlertCircle, Loader2, TicketPercent, Gift, Coins, Lock, Shield, Truck, Package, Share2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCartStore } from '@/store/cart'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import { supabase } from '@/lib/supabase'
 import { formatPrice, isValidUUID, getEffectivePrice } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import Link from 'next/link'
+import { getStoredReferralCode } from '@/components/referral-capture'
+import { getStoredAffiliateCode } from '@/components/affiliate-capture'
+import { REFERRAL_DISCOUNT_EUR, REFERRAL_MIN_ORDER_SUBTOTAL } from '@/lib/referral'
+import { getDeliveryEstimateText } from '@/lib/shipping'
+import { CheckoutGuard } from '@/components/checkout-guard'
+import { VoucherBadges } from '@/components/shop/voucher-badges'
 
 interface ShippingAddress {
   email: string
@@ -27,6 +35,7 @@ interface ShippingAddress {
 }
 
 export default function CheckoutPage() {
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -49,40 +58,154 @@ export default function CheckoutPage() {
   const [discountInput, setDiscountInput] = useState('')
   const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; amount: number } | null>(null)
   const [applyingDiscount, setApplyingDiscount] = useState(false)
+  const [loyaltyData, setLoyaltyData] = useState<{
+    points_balance: number
+    tier: 'bronze' | 'silver' | 'gold'
+    settings: { points_per_eur_discount: number; silver_discount_percent: number; gold_discount_percent: number; min_order_eur_for_discount?: number }
+  } | null>(null)
+  const [pointsToRedeem, setPointsToRedeem] = useState(0)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
+  const [usedSavedAddress, setUsedSavedAddress] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<Array<{ id: string; label: string | null; first_name: string; last_name: string; street: string; house_number: string; postal_code: string; city: string; country: string; phone: string; is_default: boolean }>>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new')
+  const [orderNote, setOrderNote] = useState('')
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [splitPaymentMode, setSplitPaymentMode] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [packages, setPackages] = useState<Array<{ seller_name: string; seller_type: string; items: { name: string; quantity: number; price: number }[]; subtotal: number }>>([])
+  const [packagesLoading, setPackagesLoading] = useState(false)
+  const [oneClickEnabled, setOneClickEnabled] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     checkAuth()
+    setReferralCode(getStoredReferralCode())
   }, [])
+
+  useEffect(() => {
+    const d = searchParams.get('discount')
+    if (d && typeof d === 'string' && d.trim()) {
+      setDiscountInput(d.trim().toUpperCase())
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (hasAdultItems() && typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('age_verification_token')
+      if (!token) {
+        router.replace(`/checkout/age-verification?returnTo=${encodeURIComponent('/checkout')}`)
+      }
+    }
+  }, [hasAdultItems, router])
+
+  useEffect(() => {
+    if (items.length === 0) return
+    fetch('/api/cart/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.session_id && typeof window !== 'undefined') sessionStorage.setItem('cart_session_id', d.session_id)
+      })
+      .catch(() => {})
+  }, [items])
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setPackages([])
+      return
+    }
+    setPackagesLoading(true)
+    fetch('/api/checkout/packages-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => setPackages(d?.packages ?? []))
+      .catch(() => setPackages([]))
+      .finally(() => setPackagesLoading(false))
+  }, [items])
+
+  const applyAddressToForm = (addr: { first_name: string; last_name: string; street: string; house_number: string; postal_code: string; city: string; country: string; phone: string }, email: string) => {
+    setShippingAddress((prev) => ({
+      ...prev,
+      email: email || prev.email,
+      first_name: addr.first_name ?? '',
+      last_name: addr.last_name ?? '',
+      street: addr.street ?? '',
+      house_number: addr.house_number ?? '',
+      postal_code: addr.postal_code ?? '',
+      city: addr.city ?? '',
+      country: addr.country ?? 'Deutschland',
+      phone: addr.phone ?? '',
+    }))
+  }
 
   const checkAuth = async () => {
     try {
       const currentUser = await getCurrentUser()
       setUser(currentUser ?? null)
+      const email = currentUser?.email ?? ''
       if (currentUser?.email) {
-        setShippingAddress((prev) => ({ ...prev, email: currentUser.email ?? prev.email }))
+        setShippingAddress((prev) => ({ ...prev, email }))
       }
       if (currentUser?.id) {
-        const { data: lastOrder } = await supabase
-          .from('orders')
-          .select('shipping_address')
+        fetch('/api/account/loyalty')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => d && d.enabled !== false && setLoyaltyData({ points_balance: d.points_balance, tier: d.tier, settings: d.settings }))
+          .catch(() => {})
+        const { data: addressesData } = await supabase
+          .from('customer_addresses')
+          .select('id, label, first_name, last_name, street, house_number, postal_code, city, country, phone, is_default')
           .eq('user_id', currentUser.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
-        const addr = lastOrder?.shipping_address as Record<string, string> | null
-        if (addr) {
-          setShippingAddress((prev) => ({
-            ...prev,
-            email: addr.email ?? prev.email,
-            first_name: addr.first_name ?? prev.first_name,
-            last_name: addr.last_name ?? prev.last_name,
-            street: addr.street ?? prev.street,
-            house_number: addr.house_number ?? prev.house_number,
-            postal_code: addr.postal_code ?? prev.postal_code,
-            city: addr.city ?? prev.city,
-            country: addr.country ?? prev.country,
-            phone: addr.phone ?? prev.phone,
-          }))
+          .order('is_default', { ascending: false })
+        const addrs = addressesData || []
+        setSavedAddresses(addrs)
+
+        if (addrs.length > 0) {
+          const defaultOrFirst = addrs.find(a => a.is_default) || addrs[0]
+          setSelectedAddressId(defaultOrFirst.id)
+          applyAddressToForm(defaultOrFirst, email)
+          setUsedSavedAddress(true)
+        }
+        fetch('/api/account/checkout-preferences', { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((prefs) => prefs && setOneClickEnabled(Boolean(prefs.one_click_enabled)))
+          .catch(() => {})
+        if (addrs.length === 0) {
+          const { data: lastOrder } = await supabase
+            .from('orders')
+            .select('shipping_address')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+          const addr = lastOrder?.shipping_address as Record<string, string> | null
+          if (addr) {
+            setShippingAddress((prev) => ({
+              ...prev,
+              email: (addr.email as string) ?? email,
+              first_name: (addr.first_name as string) ?? prev.first_name,
+              last_name: (addr.last_name as string) ?? prev.last_name,
+              street: (addr.street as string) ?? prev.street,
+              house_number: (addr.house_number as string) ?? prev.house_number,
+              postal_code: (addr.postal_code as string) ?? prev.postal_code,
+              city: (addr.city as string) ?? prev.city,
+              country: (addr.country as string) ?? prev.country,
+              phone: (addr.phone as string) ?? prev.phone,
+            }))
+            setUsedSavedAddress(true)
+          }
+          setSelectedAddressId('new')
         }
       }
     } catch (error) {
@@ -156,14 +279,51 @@ export default function CheckoutPage() {
       return
     }
 
+    // DSGVO/DDG: Pflicht-Einwilligungen vor Bestellung (Art. 6 Abs. 1 lit. a DSGVO)
+    if (!privacyAccepted || !termsAccepted) {
+      setCheckoutError('Bitte bestätige die Datenschutzerklärung und die AGB.')
+      toast({
+        title: 'Bestätigung erforderlich',
+        description: 'Du musst der Datenschutzerklärung und den AGB zustimmen.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsProcessing(true)
 
     try {
       const orderNumber = generateOrderNumber()
       const subtotal = getSubtotal()
       const shipping = getShipping()
-      const discountAmount = appliedDiscount?.amount ?? 0
-      const total = Math.max(0, subtotal + shipping - discountAmount)
+      const pointsPerEurCalc = loyaltyData?.settings.points_per_eur_discount || 20
+      const minOrderCalc = loyaltyData?.settings.min_order_eur_for_discount ?? 0
+      const discCodeCalc = Math.min(subtotal, appliedDiscount?.amount ?? 0)
+      const discTierCalc =
+        subtotal >= minOrderCalc
+          ? (loyaltyData?.tier === 'silver'
+            ? (subtotal * (loyaltyData.settings.silver_discount_percent || 0)) / 100
+            : loyaltyData?.tier === 'gold'
+              ? (subtotal * (loyaltyData.settings.gold_discount_percent || 0)) / 100
+              : 0)
+          : 0
+      const redeemRawCalc = Math.min(pointsToRedeem, loyaltyData?.points_balance ?? 0)
+      const discPointsCalc = Math.min(redeemRawCalc / pointsPerEurCalc, subtotal)
+      const discRefCalc =
+        referralCode && subtotal >= REFERRAL_MIN_ORDER_SUBTOTAL
+          ? Math.min(REFERRAL_DISCOUNT_EUR, subtotal + shipping)
+          : 0
+      const bestValueCalc = Math.max(discCodeCalc, discTierCalc, discPointsCalc, discRefCalc)
+      const useCodeCalc = bestValueCalc === discCodeCalc && discCodeCalc > 0
+      const useTierCalc = bestValueCalc === discTierCalc && discTierCalc > 0
+      const usePointsCalc = bestValueCalc === discPointsCalc && discPointsCalc > 0
+      const useRefCalc = bestValueCalc === discRefCalc && discRefCalc > 0
+
+      const discountAmount = useCodeCalc ? discCodeCalc : 0
+      const tierDiscount = useTierCalc ? discTierCalc : 0
+      const redeem = usePointsCalc ? Math.floor(discPointsCalc * pointsPerEurCalc) : 0
+      const refCodeToSend = useRefCalc && referralCode && subtotal >= REFERRAL_MIN_ORDER_SUBTOTAL ? referralCode : null
+      const total = Math.max(0, subtotal + shipping - bestValueCalc)
 
       const customerEmail = user?.email ?? shippingAddress.email
       if (!customerEmail?.trim()) {
@@ -201,24 +361,53 @@ export default function CheckoutPage() {
           shipping_cost: shipping,
           total,
           has_adult_items: hasAdultItems(),
-          discount_code: appliedDiscount?.code ?? null,
+          discount_code: useCodeCalc ? (appliedDiscount?.code ?? null) : null,
           discount_amount: discountAmount,
+          loyalty_points_redeemed: redeem,
+          loyalty_tier_discount_amount: tierDiscount,
+          referral_code: refCodeToSend,
+          affiliate_code: typeof getStoredAffiliateCode === 'function' ? getStoredAffiliateCode() : null,
           items: orderItemsPayload,
+          cart_session_id: typeof window !== 'undefined' ? sessionStorage.getItem('cart_session_id') : null,
+          order_note: orderNote.trim() || null,
+          age_verification_token: hasAdultItems() && typeof window !== 'undefined' ? sessionStorage.getItem('age_verification_token') : null,
+          payment_mode: splitPaymentMode && user ? 'split' : undefined,
         }),
       })
 
       const data = await res.json()
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Checkout fehlgeschlagen')
+        const msg = data.error || 'Checkout fehlgeschlagen'
+        setCheckoutError(msg)
+        throw new Error(msg)
+      }
+      setCheckoutError(null)
+
+      clearCart()
+      if (hasAdultItems() && typeof window !== 'undefined') {
+        sessionStorage.removeItem('age_verification_token')
+      }
+
+      if (data.needs_approval) {
+        toast({
+          title: 'Bestellung wartet auf Freigabe',
+          description: data.message || 'Ihr Einkaufsverantwortlicher wurde benachrichtigt.',
+        })
+        router.push(`/order-confirmation?order=${orderNumber}&approval_pending=1`)
+        return
+      }
+
+      if (data.split_url) {
+        toast({ title: 'Rechnung zum Teilen erstellt', description: data.message })
+        window.location.href = data.split_url
+        return
       }
 
       toast({
         title: 'Weiterleitung zur Zahlung',
         description: `Bestellung #${orderNumber} – du wirst zu Mollie weitergeleitet.`,
       })
-
-      clearCart()
 
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
@@ -227,6 +416,7 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       console.error('Order error:', error)
+      setCheckoutError(error?.message || 'Bitte versuche es erneut.')
       toast({
         title: 'Bestellung fehlgeschlagen',
         description: error.message || 'Bitte versuche es erneut.',
@@ -266,13 +456,49 @@ export default function CheckoutPage() {
 
   const subtotal = getSubtotal()
   const shipping = getShipping()
-  const discountAmount = appliedDiscount?.amount ?? 0
-  const total = Math.max(0, subtotal + shipping - discountAmount)
+  const pointsPerEur = loyaltyData?.settings.points_per_eur_discount || 20
+  const minOrderForDiscount = loyaltyData?.settings.min_order_eur_for_discount ?? 0
+
+  // Nur ein Rabatt anwendbar – der mit dem höchsten Ersparnisbetrag
+  const discCode = Math.min(subtotal, appliedDiscount?.amount ?? 0)
+  const discTier =
+    subtotal >= minOrderForDiscount
+      ? (loyaltyData?.tier === 'silver'
+        ? (subtotal * (loyaltyData.settings.silver_discount_percent || 0)) / 100
+        : loyaltyData?.tier === 'gold'
+          ? (subtotal * (loyaltyData.settings.gold_discount_percent || 0)) / 100
+          : 0)
+      : 0
+  const redeemRaw = Math.min(pointsToRedeem, loyaltyData?.points_balance ?? 0)
+  const discPoints = Math.min(redeemRaw / pointsPerEur, subtotal)
+  const discRef =
+    referralCode && subtotal >= REFERRAL_MIN_ORDER_SUBTOTAL
+      ? Math.min(REFERRAL_DISCOUNT_EUR, subtotal + shipping)
+      : 0
+
+  const bestValue = Math.max(discCode, discTier, discPoints, discRef)
+  const useCode = bestValue === discCode && discCode > 0
+  const useTier = bestValue === discTier && discTier > 0
+  const usePoints = bestValue === discPoints && discPoints > 0
+  const useRef = bestValue === discRef && discRef > 0
+
+  const discountAmount = useCode ? discCode : 0
+  const tierDiscount = useTier ? discTier : 0
+  const pointsDiscountEuro = usePoints ? discPoints : 0
+  const actualPointsRedeem = Math.floor(pointsDiscountEuro * pointsPerEur)
+  const referralDiscountApplied = useRef ? discRef : 0
+
+  const total = Math.max(0, subtotal + shipping - bestValue)
   const needsAdultCheck = hasAdultItems()
+  const maxRedeemablePoints = Math.min(
+    loyaltyData?.points_balance ?? 0,
+    Math.floor(subtotal * pointsPerEur)
+  )
   const hasInvalidCartItems = items.some((item) => !isValidUUID(item.product.id))
 
   return (
-    <div className="min-h-screen bg-luxe-black py-12">
+    <div className="min-h-screen bg-luxe-black py-6 sm:py-12">
+      <CheckoutGuard />
       <div className="container-luxe">
         {hasInvalidCartItems && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -297,17 +523,18 @@ export default function CheckoutPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Checkout</h1>
-          <p className="text-luxe-silver">Schließe deine Bestellung ab</p>
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Kasse</h1>
+          <p className="text-luxe-silver text-sm sm:text-base">Schließe deine Bestellung ab</p>
         </motion.div>
 
-        {/* Option: Als Gast oder anmelden */}
+        {/* Option: Anmelden und gespeicherte Daten nutzen oder als Gast */}
         {!user && (
           <div className="mb-6 p-4 bg-luxe-charcoal border border-luxe-gray rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="text-luxe-silver">
-              Du bestellst als <strong className="text-white">Gast</strong>. Du kannst dich anmelden, um deine Bestellungen im Kundenkonto zu sehen.
+              Du bestellst als <strong className="text-white">Gast</strong>.{' '}
+              <strong className="text-white">Jetzt anmelden</strong>, um deine hinterlegten Adressdaten zu übernehmen und Bestellungen in deinem Konto zu sehen – oder hier die Felder manuell ausfüllen.
             </p>
             <Button
               type="button"
@@ -315,12 +542,98 @@ export default function CheckoutPage() {
               className="border-luxe-gold text-luxe-gold shrink-0"
               onClick={() => router.push('/auth?redirect=/checkout')}
             >
-              Anmelden / Registrieren
+              Anmelden & Daten übernehmen
             </Button>
           </div>
         )}
 
-        <form onSubmit={handlePlaceOrder}>
+        {/* 1-Click aktivieren (nur wenn eingeloggt + Adressen) */}
+        {user && savedAddresses.length > 0 && (
+          <Card className="mb-6 bg-luxe-charcoal border-luxe-gray border-luxe-gold/30">
+            <CardContent className="pt-6">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={oneClickEnabled}
+                  onChange={(e) => {
+                    const v = e.target.checked
+                    setOneClickEnabled(v)
+                    fetch('/api/account/checkout-preferences', {
+                      method: 'PATCH',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ one_click_enabled: v }),
+                    }).catch(() => {})
+                  }}
+                  className="rounded border-luxe-gray bg-luxe-charcoal text-luxe-gold focus:ring-luxe-gold"
+                />
+                <span className="text-white font-medium">1-Click Checkout aktivieren</span>
+              </label>
+              <p className="text-luxe-silver text-sm mt-1 ml-6">
+                Beim nächsten Mal kannst du mit einem Klick bestellen (gespeicherte Adresse + AGB werden übernommen).
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Lieferadresse wählen (gespeicherte Adressen) */}
+        {user && savedAddresses.length > 0 && (
+          <Card className="mb-6 bg-luxe-charcoal border-luxe-gray">
+            <CardHeader>
+              <CardTitle className="text-white text-base flex items-center">
+                <MapPin className="w-4 h-4 mr-2 text-luxe-gold" />
+                Lieferadresse wählen
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <select
+                value={selectedAddressId}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setSelectedAddressId(val)
+                  if (val === 'new') {
+                    setShippingAddress((prev) => ({
+                      ...prev,
+                      first_name: '',
+                      last_name: '',
+                      street: '',
+                      house_number: '',
+                      postal_code: '',
+                      city: '',
+                      country: 'Deutschland',
+                      phone: '',
+                    }))
+                  } else {
+                    const addr = savedAddresses.find(a => a.id === val)
+                    if (addr) applyAddressToForm(addr, user?.email ?? '')
+                  }
+                }}
+                className="w-full rounded-md border border-luxe-silver bg-luxe-gray px-4 py-3 text-white focus:border-luxe-gold focus:ring-1 focus:ring-luxe-gold"
+              >
+                {savedAddresses.map((addr) => (
+                  <option key={addr.id} value={addr.id}>
+                    {addr.label || `${addr.first_name} ${addr.last_name}`} – {addr.street} {addr.house_number}, {addr.postal_code} {addr.city}
+                  </option>
+                ))}
+                <option value="new">Neue Adresse eingeben</option>
+              </select>
+              <p className="text-luxe-silver text-xs mt-2">
+                Du kannst die Felder unten bei Bedarf anpassen.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Hinweis wenn nur letzte Bestellung übernommen (keine gespeicherten Adressen) */}
+        {user && usedSavedAddress && savedAddresses.length === 0 && (
+          <div className="mb-6 p-4 bg-luxe-charcoal border border-luxe-gold/40 rounded-lg">
+            <p className="text-luxe-silver text-sm">
+              <strong className="text-luxe-gold">Deine letzte Lieferadresse</strong> wurde eingetragen. Du kannst die Felder unten anpassen oder Adressen in deinem <Link href="/account" className="text-luxe-gold hover:underline">Kundenkonto</Link> speichern.
+            </p>
+          </div>
+        )}
+
+        <form ref={formRef} onSubmit={handlePlaceOrder}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Shipping Form */}
             <div className="lg:col-span-2 space-y-6">
@@ -437,6 +750,18 @@ export default function CheckoutPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-2 pt-2 border-t border-luxe-gray">
+                    <Label htmlFor="order_note" className="text-white">Bestellnotiz (optional)</Label>
+                    <Textarea
+                      id="order_note"
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="z.B. Klingel defekt, bitte bei Nachbarn abgeben"
+                      rows={2}
+                      className="bg-luxe-gray border-luxe-silver text-white placeholder:text-luxe-silver resize-none"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -448,6 +773,21 @@ export default function CheckoutPage() {
                   <CardTitle className="text-white">Bestellübersicht</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Packages-Anzeige (Phase 3.2) – nur wenn mehrere Pakete */}
+                  {packages.length > 1 && (
+                    <div className="rounded-lg border border-luxe-gold/40 bg-luxe-gold/5 p-3 space-y-2">
+                      <p className="text-sm font-medium text-luxe-gold flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        {packagesLoading ? 'Lade Paketübersicht…' : `${packages.length} getrennte Lieferungen`}
+                      </p>
+                      {!packagesLoading && packages.map((pkg, idx) => (
+                        <div key={idx} className="text-xs text-luxe-silver">
+                          <span className="font-medium text-white">{pkg.seller_name}</span>
+                          <span className="ml-1">• {pkg.items.length} Artikel • {formatPrice(pkg.subtotal)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {/* Items */}
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {items.map((item) => {
@@ -466,6 +806,9 @@ export default function CheckoutPage() {
                       )
                     })}
                   </div>
+
+                  {/* Voucher Badges (klickbar) */}
+                  <VoucherBadges subtotal={getSubtotal()} onApply={(code) => setDiscountInput(code.toUpperCase())} />
 
                   {/* Rabattcode */}
                   <div className="space-y-2">
@@ -506,7 +849,34 @@ export default function CheckoutPage() {
                         Code {appliedDiscount.code}: −{formatPrice(appliedDiscount.amount)}
                       </p>
                     )}
+                    <p className="text-luxe-silver/70 text-xs mt-1">
+                      Es ist nur ein Rabatt anwendbar – der mit dem höchsten Ersparnisbetrag wird automatisch gewählt.
+                    </p>
                   </div>
+
+                  {/* Loyalty: Punkte einlösen (nur wenn angemeldet + Punkte) */}
+                  {user && loyaltyData && loyaltyData.points_balance > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-white text-sm flex items-center gap-1">
+                        <Coins className="w-4 h-4 text-luxe-gold" />
+                        Punkte einlösen ({loyaltyData.points_balance} verfügbar)
+                      </Label>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={maxRedeemablePoints}
+                          value={pointsToRedeem || ''}
+                          onChange={(e) => setPointsToRedeem(Math.max(0, Math.min(maxRedeemablePoints, parseInt(e.target.value, 10) || 0)))}
+                          placeholder="0"
+                          className="bg-luxe-gray border-luxe-silver text-white w-24"
+                        />
+                        <span className="text-luxe-silver text-xs">
+                          {pointsPerEur} Punkte = 1€ Rabatt
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 18+ Notice */}
                   {needsAdultCheck && (
@@ -534,6 +904,24 @@ export default function CheckoutPage() {
                         <span>− {formatPrice(appliedDiscount.amount)}</span>
                       </div>
                     )}
+                    {tierDiscount > 0 && (
+                      <div className="flex justify-between text-amber-400 text-sm">
+                        <span>Status-Rabatt ({loyaltyData?.tier === 'gold' ? 'Gold' : 'Silber'})</span>
+                        <span>− {formatPrice(tierDiscount)}</span>
+                      </div>
+                    )}
+                    {actualPointsRedeem > 0 && (
+                      <div className="flex justify-between text-green-400 text-sm">
+                        <span>Punkte ({actualPointsRedeem})</span>
+                        <span>− {formatPrice(pointsDiscountEuro)}</span>
+                      </div>
+                    )}
+                    {referralDiscountApplied > 0 && (
+                      <div className="flex justify-between text-green-400 text-sm">
+                        <span>Freundesrabatt (Empfehlung)</span>
+                        <span>− {formatPrice(referralDiscountApplied)}</span>
+                      </div>
+                    )}
                     {needsAdultCheck && (
                       <div className="flex justify-between text-red-400 text-sm">
                         <span>DHL Ident-Check</span>
@@ -546,15 +934,118 @@ export default function CheckoutPage() {
                         {formatPrice(total)}
                       </span>
                     </div>
+                    <p className="text-luxe-silver/80 text-xs pt-1">
+                      Inkl. gesetzlicher USt. zzgl. Versand
+                    </p>
+                    <p className="text-emerald-500/90 text-xs pt-2 flex items-center gap-1">
+                      <Truck className="w-3.5 h-3.5" />
+                      Lieferung voraussichtlich in {getDeliveryEstimateText()}
+                    </p>
                   </div>
 
+                  {/* Widerrufsfrist (klar sichtbar) */}
+                  <p className="text-luxe-silver text-sm text-center py-2 border-t border-luxe-gray/60">
+                    <strong className="text-white">Widerrufsfrist:</strong> 14 Tage¹ ab dem Tag, an dem du die Ware erhältst. ¹Ausnahmen möglich. Details in unserer{' '}
+                    <Link href="/returns#ausnahmen" className="text-luxe-gold hover:underline">Widerrufsbelehrung</Link>.
+                  </p>
+
+                  {/* DSGVO: Pflicht-Checkboxen vor Vertragsschluss */}
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 cursor-pointer text-sm text-luxe-silver">
+                      <input
+                        type="checkbox"
+                        checked={privacyAccepted}
+                        onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                        className="mt-1 rounded border-luxe-gray bg-luxe-charcoal text-luxe-gold focus:ring-luxe-gold"
+                      />
+                      <span>
+                        Ich habe die <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-luxe-gold hover:underline">Datenschutzerklärung</Link> zur Kenntnis genommen und stimme der Verarbeitung meiner Daten zu.
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer text-sm text-luxe-silver">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-1 rounded border-luxe-gray bg-luxe-charcoal text-luxe-gold focus:ring-luxe-gold"
+                      />
+                      <span>
+                        Ich habe die <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-luxe-gold hover:underline">AGB</Link> und die <Link href="/returns" target="_blank" rel="noopener noreferrer" className="text-luxe-gold hover:underline">Widerrufsbelehrung</Link> gelesen und akzeptiere diese.
+                      </span>
+                    </label>
+                    {user && (
+                      <label className="flex items-start gap-3 cursor-pointer text-sm text-luxe-silver">
+                        <input
+                          type="checkbox"
+                          checked={splitPaymentMode}
+                          onChange={(e) => setSplitPaymentMode(e.target.checked)}
+                          className="mt-1 rounded border-luxe-gray bg-luxe-charcoal text-luxe-gold focus:ring-luxe-gold"
+                        />
+                        <span>
+                          <Share2 className="w-4 h-4 text-luxe-gold inline-block mr-1 -mt-0.5 align-middle" />
+                          Rechnung mit Freunden teilen – Link erstellen, Freunde zahlen ihre Anteile.
+                        </span>
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Trust-Strip */}
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-3 text-xs text-luxe-silver border-y border-luxe-gray/60">
+                    <span className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                      Sichere Zahlung (Mollie)
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                      SSL-verschlüsselt
+                    </span>
+                    <Link href="/impressum" className="hover:text-luxe-gold transition-colors">Impressum</Link>
+                    <Link href="/privacy" className="hover:text-luxe-gold transition-colors">Datenschutz</Link>
+                    <Link href="/terms" className="hover:text-luxe-gold transition-colors">Widerruf & AGB</Link>
+                  </div>
+
+                  {/* Fehlermeldung nah am Button (nicht nur Toast) */}
+                  {checkoutError && (
+                    <div className="rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-red-400">Bestellung fehlgeschlagen</p>
+                        <p className="text-sm text-red-300/90 mt-0.5">{checkoutError}</p>
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutError(null)}
+                          className="text-xs text-red-400 hover:text-red-300 underline mt-2"
+                        >
+                          Meldung schließen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {/* 1-Click kaufen (wenn aktiviert und Adresse gewählt) */}
+                  {oneClickEnabled && user && savedAddresses.length > 0 && items.length > 0 && selectedAddressId !== 'new' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="w-full min-h-[48px] border-luxe-gold text-luxe-gold hover:bg-luxe-gold/10 mb-3"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        setPrivacyAccepted(true)
+                        setTermsAccepted(true)
+                        setTimeout(() => formRef.current?.requestSubmit(), 0)
+                      }}
+                    >
+                      <Zap className="w-5 h-5 mr-2" />
+                      Mit 1-Click kaufen
+                    </Button>
+                  )}
                   {/* Submit Button */}
                   <Button
                     type="submit"
                     variant="luxe"
                     size="lg"
-                    className="w-full"
-                    disabled={isProcessing}
+                    className="w-full min-h-[48px]"
+                    disabled={isProcessing || !privacyAccepted || !termsAccepted}
                   >
                     {isProcessing ? (
                       <>
@@ -570,7 +1061,7 @@ export default function CheckoutPage() {
                   </Button>
 
                   <p className="text-xs text-luxe-silver text-center">
-                    Mit der Bestellung akzeptierst du unsere AGB
+                    Mit der Bestellung schließt du einen verbindlichen Kaufvertrag ab.
                   </p>
                 </CardContent>
               </Card>

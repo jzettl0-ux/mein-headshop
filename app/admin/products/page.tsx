@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, getEffectivePrice, hasActiveDiscount, getDisplayDiscountPercent } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { AdminBereichErklaerung } from '@/components/admin/admin-bereich-erklaerung'
 
 // Mock products - später durch echte Supabase-Daten ersetzen
 const mockProducts = [
@@ -105,7 +106,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Produkte</h1>
           <p className="text-luxe-silver">
-            Verwalte deine Store-Produkte und Influencer-Editionen
+            Verwalte deine Shop-Produkte und Influencer-Editionen
           </p>
         </div>
         <Link
@@ -116,6 +117,13 @@ export default function AdminProductsPage() {
           Neues Produkt
         </Link>
       </div>
+
+      <AdminBereichErklaerung
+        titel="Produkte"
+        zweck="Hier legst du alle Artikel an, änderst Preise, Bilder, Beschreibungen und Lagerbestand. Produkte können einer Kategorie und einem Influencer zugeordnet werden."
+        funktionsweise="Über ‚Neues Produkt‘ legst du einen Artikel an. In der Liste suchst und filterst du. Klick auf Bearbeiten öffnet die vollständige Produktbearbeitung. 18+-Produkte werden im Checkout geprüft."
+        wannNutzen="Bei neuen Artikeln, Preisanpassungen, Lager-Updates und Änderungen an Beschreibungen oder Bildern."
+      />
 
       {/* Search */}
       <Card className="bg-luxe-charcoal border-luxe-gray">
@@ -173,17 +181,41 @@ export default function AdminProductsPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <div className="text-white font-bold text-xl">
-                            {formatPrice(product.price)}
-                          </div>
-                          <div className="text-luxe-silver text-sm">
-                            Stock: {product.stock}
-                          </div>
+                          {(() => {
+                            const p = product as { price: number; discount_percent?: number; discount_until?: string | null }
+                            const effective = getEffectivePrice(p)
+                            const hasDiscount = hasActiveDiscount(p)
+                            const showStrikethrough = hasDiscount && p.price > effective
+                            const displayPercent = showStrikethrough ? getDisplayDiscountPercent(p.price, effective) : null
+                            return (
+                              <>
+                                {showStrikethrough && (
+                                  <div className="text-luxe-silver text-sm line-through">
+                                    {formatPrice(p.price)}
+                                  </div>
+                                )}
+                                <div className="text-white font-bold text-xl">
+                                  {formatPrice(effective)}
+                                  {displayPercent != null && (
+                                    <span className="ml-1.5 text-luxe-gold text-sm font-normal">(−{displayPercent}%)</span>
+                                  )}
+                                </div>
+                                <div className="text-luxe-silver text-sm">
+                                  Lager: {product.stock}
+                                </div>
+                              </>
+                            )
+                          })()}
                         </div>
                       </div>
 
                       {/* Badges */}
                       <div className="flex flex-wrap gap-2 mb-4">
+                        {(product as { is_active?: boolean }).is_active !== false ? (
+                          <Badge className="bg-emerald-600 text-white border-none">Im Shop</Badge>
+                        ) : (
+                          <Badge variant="secondary">Nicht im Shop</Badge>
+                        )}
                         <Badge variant="secondary">{product.category}</Badge>
                         {product.is_featured && (
                           <Badge variant="featured">Featured</Badge>

@@ -60,7 +60,17 @@ const config = {
           silver: "var(--luxe-silver, #8A8A8A)",
           gold: "var(--luxe-primary, #D4AF37)",
           neon: "var(--luxe-accent, #39FF14)",
-        }
+        },
+        // CHILLMART – Fresh Tech & Verdant Clean (neues Design-System)
+        chill: {
+          bg: "var(--chill-bg, #F9FAFB)",
+          "bg-alt": "var(--chill-bg-alt, #FFFFFF)",
+          dark: "var(--chill-dark, #1F2937)",
+          "dark-muted": "var(--chill-dark-muted, #6B7280)",
+          green: "var(--chill-green, #10B981)",
+          "green-hover": "var(--chill-green-hover, #059669)",
+          border: "var(--chill-border, #F3F4F6)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

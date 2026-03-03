@@ -71,6 +71,8 @@ export interface Product {
   category: ProductCategory
   stock: number
   is_adult_only: boolean // 18+ Produkt
+  /** Von DHL-Ident-Gebühr und has_adult_items ausgenommen (z.B. Grinder) */
+  exempt_from_adult_fee?: boolean
   is_featured: boolean
   influencer_id?: string
   tags: string[]
@@ -84,6 +86,26 @@ export interface Product {
   total_sold?: number
   average_rating?: number
   rating_count?: number
+  /** Marke/Hersteller (z. B. Purize, RAW) – für Filter und Anzeige */
+  brand?: string | null
+  /** false = nur im Admin/Kostenrechner, nicht im Shop angezeigt */
+  is_active?: boolean
+  /** Immer als „NEU“ anzeigen (unabhängig von created_at) */
+  is_new_override?: boolean
+  /** Sale-Badge anzeigen; discount_text als Plakette */
+  on_sale?: boolean
+  /** Text für die Sale-Plakette (z. B. „−20 %“) */
+  discount_text?: string | null
+  /** PAngV: Niedrigster Preis der letzten 30 Tage – nur dann darf Streichpreis angezeigt werden */
+  reference_price_30d?: number | null
+  /** Optional: Unterkategorie (slug) innerhalb der Hauptkategorie */
+  subcategory_slug?: string | null
+  /** ASIN (8–15 Zeichen), für Katalog-Sync und Variationen */
+  asin?: string | null
+  /** Parent-ASIN, falls dieses Produkt eine Variation ist */
+  parent_asin?: string | null
+  /** Variationsachse: Size, Color, PackQuantity, SizeColor */
+  variation_theme?: string | null
 }
 
 export interface DiscountCode {
@@ -101,13 +123,42 @@ export interface DiscountCode {
   updated_at: string
 }
 
-export type ProductCategory = 
+export type ProductCategory =
   | 'bongs'
   | 'grinder'
   | 'papers'
   | 'vaporizer'
   | 'zubehoer'
   | 'influencer-drops'
+
+export interface ProductSubcategory {
+  id: string
+  parent_category: ProductCategory
+  slug: string
+  name: string
+  sort_order: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface HomepageCategory {
+  id: string
+  name: string
+  slug: string
+  description: string
+  image_url: string | null
+  gradient: string
+  icon_color: string
+  /** Eigene Verlauf-Startfarbe (Hex), optional */
+  gradient_start_hex?: string | null
+  /** Eigene Verlauf-Endfarbe (Hex), optional */
+  gradient_end_hex?: string | null
+  /** Eigene Icon-Farbe (Hex), optional */
+  icon_color_hex?: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
 
 export interface Influencer {
   id: string
@@ -181,12 +232,17 @@ export interface ShippingAddress {
   phone: string
 }
 
-export type OrderStatus = 
+export type OrderStatus =
   | 'pending'
   | 'processing'
   | 'shipped'
   | 'delivered'
   | 'cancelled'
+  | 'cancellation_requested'
+  | 'cancellation_rejected'
+  | 'return_requested'
+  | 'return_rejected'
+  | 'return_completed'
 
 export type PaymentStatus = 
   | 'pending'
@@ -205,6 +261,8 @@ export interface CartState {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
+  /** Cart-Merge: Warenkorb aus Server (z. B. nach Login) in den Store übernehmen */
+  replaceItems: (items: CartItem[]) => void
   getTotal: () => number
   getSubtotal: () => number
   getShipping: () => number

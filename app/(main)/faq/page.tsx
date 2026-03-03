@@ -52,6 +52,10 @@ const faqs = [
         a: 'Store-Produkte sind von uns kuratiert und geprüft. Influencer-Editionen sind exklusive Kollektionen, die von unseren Partner-Influencern persönlich ausgewählt und designed wurden.',
       },
       {
+        q: 'Was bedeuten „Store-Highlight“ und „Bestseller“?',
+        a: 'Store-Highlight: Von uns handverlesen – Produkte, die wir dir besonders ans Herz legen (Qualität, Neuheiten, Topseller). Bestseller: Von euch gewählt – Artikel, die am häufigsten gekauft werden. Beides sind vertrauensvolle Orientierungshilfen beim Stöbern.',
+      },
+      {
         q: 'Gibt es eine Garantie?',
         a: 'Ja, alle Produkte haben die gesetzliche Gewährleistung von 2 Jahren. Bei Defekten kontaktiere uns einfach.',
       },
@@ -66,11 +70,11 @@ const faqs = [
       },
       {
         q: 'Kann ich eine Bestellung stornieren?',
-        a: 'Solange die Bestellung noch nicht versandt wurde, kannst du sie kostenfrei stornieren. Kontaktiere uns einfach mit deiner Bestellnummer.',
+        a: 'Du kannst keine Bestellung selbst stornieren. In deinem Konto unter „Bestellungen“ kannst du bei noch nicht versendeten Bestellungen eine Stornierung anfragen (optional mit Grund). Wir bearbeiten die Anfrage und melden uns bei dir.',
       },
       {
         q: 'Wie funktioniert die Rückgabe?',
-        a: 'Du hast 14 Tage Widerrufsrecht. Produkte müssen unbenutzt und in Originalverpackung sein. Kontaktiere uns für ein Rücksendelabel.',
+        a: 'Du hast in der Regel 14 Tage Widerrufsrecht* – Produkte müssen unbenutzt und in Originalverpackung sein. Es gibt Ausnahmen (z.B. hygienerelevante oder personalisierte Produkte). Details in unserer Widerrufsbelehrung. Kontaktiere uns für ein Rücksendelabel.',
       },
     ],
   },

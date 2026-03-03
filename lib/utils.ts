@@ -18,6 +18,23 @@ export function formatPrice(price: number): string {
   }).format(price)
 }
 
+/** Umsatzsteuersatz in % (z. B. 19 für Deutschland) – für Preishinweise gemäß UStG */
+export const VAT_RATE_PERCENT = 19
+
+/**
+ * Brutto → Netto (bei 19 % MwSt.)
+ */
+export function netFromGross(gross: number): number {
+  return Math.round((gross / (1 + VAT_RATE_PERCENT / 100)) * 100) / 100
+}
+
+/**
+ * Brutto → enthaltene MwSt. in €
+ */
+export function vatFromGross(gross: number): number {
+  return Math.round((gross - netFromGross(gross)) * 100) / 100
+}
+
 /**
  * Format date in German locale
  */
@@ -44,15 +61,27 @@ export function generateSlug(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** Versandkosten: Standard 4,90 €, kostenlos ab diesem Bestellwert (Brutto-Zwischensumme). */
+export const FREE_SHIPPING_THRESHOLD_EUR = 50
+const BASE_SHIPPING = 4.9
+const ADULT_CHECK_FEE = 2.0
+
 /**
- * Calculate shipping cost based on cart items
+ * Berechnet Versandkosten: 4,90 € (bzw. 6,90 € mit 18+), kostenlos ab FREE_SHIPPING_THRESHOLD_EUR.
+ * @param items – Warenkorb-Positionen (für 18+-Prüfung)
+ * @param subtotalEur – optionale Zwischensumme in €; wenn >= 50, Basis-Versand entfällt
  */
-export function calculateShipping(items: Array<{ is_adult_only?: boolean }>): number {
-  const hasAdultItems = items.some(item => item.is_adult_only)
-  const baseShipping = 4.90
-  const adultCheckFee = 2.00
-  
-  return hasAdultItems ? baseShipping + adultCheckFee : baseShipping
+export function calculateShipping(
+  items: Array<{ is_adult_only?: boolean; exempt_from_adult_fee?: boolean }>,
+  subtotalEur?: number
+): number {
+  const hasAdultItems = items.some(
+    (item) => item.is_adult_only && !item.exempt_from_adult_fee
+  )
+  const freeShipping = typeof subtotalEur === 'number' && subtotalEur >= FREE_SHIPPING_THRESHOLD_EUR
+  const base = freeShipping ? 0 : BASE_SHIPPING
+  const adultFee = hasAdultItems ? ADULT_CHECK_FEE : 0
+  return Math.round((base + adultFee) * 100) / 100
 }
 
 /**
@@ -121,4 +150,52 @@ export function hasActiveDiscount(product: {
   const until = product.discount_until
   if (until && new Date(until) < new Date()) return false
   return true
+}
+
+/**
+ * Berechnet den anzuzeigenden Rabatt in Prozent aus alter und neuer Preisangabe.
+ * Liefert null, wenn kein Rabatt (alter <= neuer).
+ */
+export function getDisplayDiscountPercent(oldPrice: number, newPrice: number): number | null {
+  if (oldPrice <= 0 || newPrice >= oldPrice) return null
+  const pct = Math.round(((oldPrice - newPrice) / oldPrice) * 100)
+  return pct > 0 ? pct : null
+}
+
+/**
+ * PAngV: Referenzpreis für Streichpreis-Anzeige.
+ * Nur wenn reference_price_30d gesetzt und >= effektiver Preis, darf ein Streichpreis gezeigt werden
+ * (niedrigster Preis der letzten 30 Tage – keine „Mondpreise“).
+ * Gibt den anzuzeigenden Referenzpreis zurück oder null, wenn kein Streichpreis angezeigt werden darf.
+ */
+export function getReferencePriceForDisplay(product: {
+  price: number
+  discount_percent?: number
+  discount_until?: string | null
+  reference_price_30d?: number | null
+}): number | null {
+  if (!hasActiveDiscount(product)) return null
+  const effective = getEffectivePrice(product)
+  const ref = product.reference_price_30d
+  if (ref == null || ref < effective) return null
+  return ref
+}
+
+/** Tage, ab denen ein Produkt nicht mehr als „NEU“ gilt (ohne Override). */
+const NEW_PRODUCT_DAYS = 14
+
+/**
+ * true, wenn das Produkt als „NEU“ markiert werden soll:
+ * weniger als 14 Tage alt oder is_new_override = true.
+ */
+export function isNewProduct(product: {
+  created_at?: string
+  is_new_override?: boolean
+}): boolean {
+  if (product.is_new_override === true) return true
+  const created = product.created_at
+  if (!created) return false
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - NEW_PRODUCT_DAYS)
+  return new Date(created) >= cutoff
 }

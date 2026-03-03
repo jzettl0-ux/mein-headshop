@@ -1,6 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { getCompanyInfoAsync, getRepresentedByAsync } from '@/lib/company'
+import { getLegalContent } from '@/lib/legal-content'
+import { LegalContentRender } from '@/components/legal-content-render'
 
-export default function ImpressumPage() {
+export default async function ImpressumPage() {
+  const legal = await getLegalContent('impressum')
+  if (legal?.content) {
+    return (
+      <div className="min-h-screen bg-luxe-black py-12">
+        <div className="container-luxe max-w-4xl">
+          <LegalContentRender title={legal.title} content={legal.content} />
+        </div>
+      </div>
+    )
+  }
+  const company = await getCompanyInfoAsync()
+  const representedBy = await getRepresentedByAsync()
+  const fullAddress = `${company.address}, ${company.postalCode} ${company.city}`
   return (
     <div className="min-h-screen bg-luxe-black py-12">
       <div className="container-luxe max-w-4xl">
@@ -9,28 +25,27 @@ export default function ImpressumPage() {
         <Card className="bg-luxe-charcoal border-luxe-gray">
           <CardContent className="pt-6 space-y-6 text-luxe-silver">
             <div>
-              <h2 className="text-xl font-bold text-white mb-3">Angaben gemäß § 5 TMG</h2>
+              <h2 className="text-xl font-bold text-white mb-3">Angaben gemäß Art. 6 DDG (Digitale-Dienste-Gesetz)</h2>
               <p className="leading-relaxed">
-                Premium Headshop GmbH<br />
-                Musterstraße 123<br />
-                12345 Berlin<br />
-                Deutschland
+                {company.name}<br />
+                {company.address}<br />
+                {company.postalCode} {company.city}<br />
+                {company.country}
               </p>
             </div>
 
             <div>
               <h2 className="text-xl font-bold text-white mb-3">Kontakt</h2>
               <p className="leading-relaxed">
-                Telefon: +49 (0) 123 456789<br />
-                E-Mail: kontakt@premium-headshop.de<br />
-                Website: www.premium-headshop.de
+                {company.phone && <>Telefon: {company.phone}<br /></>}
+                E-Mail: <a href={`mailto:${company.email}`} className="text-luxe-gold hover:underline">{company.email}</a>
               </p>
             </div>
 
             <div>
               <h2 className="text-xl font-bold text-white mb-3">Vertreten durch</h2>
               <p className="leading-relaxed">
-                Geschäftsführer: Max Mustermann
+                {representedBy}
               </p>
             </div>
 
@@ -43,20 +58,21 @@ export default function ImpressumPage() {
               </p>
             </div>
 
-            <div>
-              <h2 className="text-xl font-bold text-white mb-3">Umsatzsteuer-ID</h2>
-              <p className="leading-relaxed">
-                Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:<br />
-                DE123456789
-              </p>
-            </div>
+            {company.vatId && (
+              <div>
+                <h2 className="text-xl font-bold text-white mb-3">Umsatzsteuer-ID</h2>
+                <p className="leading-relaxed">
+                  Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:<br />
+                  {company.vatId}
+                </p>
+              </div>
+            )}
 
             <div>
-              <h2 className="text-xl font-bold text-white mb-3">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+              <h2 className="text-xl font-bold text-white mb-3">Verantwortlich für den Inhalt (RStV / DDG)</h2>
               <p className="leading-relaxed">
-                Max Mustermann<br />
-                Musterstraße 123<br />
-                12345 Berlin
+                {company.name}<br />
+                {fullAddress}
               </p>
             </div>
 
@@ -80,9 +96,10 @@ export default function ImpressumPage() {
             </div>
 
             <div className="pt-6 border-t border-luxe-gray">
+              <p className="text-sm text-luxe-silver/80 mb-4">Stand: 20.02.2026 (DDG)</p>
               <h2 className="text-xl font-bold text-white mb-3">Hinweis zur Altersbeschränkung</h2>
               <p className="leading-relaxed">
-                🔞 Premium Headshop verkauft Produkte, die nur an Personen über 18 Jahre abgegeben werden dürfen.
+                🔞 {company.name} verkauft Produkte, die nur an Personen über 18 Jahre abgegeben werden dürfen.
                 Der Verkauf an Minderjährige ist gesetzlich verboten und wird strafrechtlich verfolgt.
               </p>
             </div>

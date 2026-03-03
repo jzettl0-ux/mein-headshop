@@ -1,8 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CreditCard, Smartphone, Building2, CheckCircle } from 'lucide-react'
+import { CreditCard, Smartphone, Building2, CheckCircle, FileText, Landmark } from 'lucide-react'
 
 export default function PaymentMethodsPage() {
+  // Conversion-Treiber DE: PayPal, Kauf auf Rechnung, SEPA, Kreditkarte (Mollie-Dashboard aktivieren)
   const paymentMethods = [
+    {
+      icon: CheckCircle,
+      name: 'PayPal',
+      description: 'Mit PayPal-Konto oder Karte – hoher Marktanteil in Deutschland',
+      features: ['Käuferschutz', 'Schnell', 'Sicher'],
+    },
+    {
+      icon: FileText,
+      name: 'Kauf auf Rechnung',
+      description: 'Zuerst bestellen, später bezahlen (z. B. Klarna, in3)',
+      features: ['Kein Vorkasse', 'Zahlung nach Erhalt', 'Raten möglich'],
+    },
+    {
+      icon: Landmark,
+      name: 'SEPA-Lastschrift',
+      description: 'Direkte Abbuchung von deinem Girokonto',
+      features: ['Bequem', 'Sicher', 'Einmal oder wiederkehrend'],
+    },
     {
       icon: CreditCard,
       name: 'Kreditkarte',
@@ -10,22 +29,10 @@ export default function PaymentMethodsPage() {
       features: ['Sofortige Bestätigung', 'Sicher verschlüsselt', '3D-Secure'],
     },
     {
-      icon: Smartphone,
-      name: 'iDEAL',
-      description: 'Niederländische Online-Banking-Lösung',
-      features: ['Beliebt in NL', 'Direkte Überweisung', 'Sofortige Bestätigung'],
-    },
-    {
       icon: Building2,
-      name: 'Sofortüberweisung',
-      description: 'Direkte Banküberweisung',
-      features: ['Sofort verfügbar', 'Keine Registrierung', 'Sicher'],
-    },
-    {
-      icon: CheckCircle,
-      name: 'PayPal',
-      description: 'Weltweit beliebt',
-      features: ['Käuferschutz', 'Schnell', 'Sicher'],
+      name: 'Weitere Methoden',
+      description: 'z. B. Giropay, Sofortüberweisung – je nach Aktivierung',
+      features: ['Über Mollie abgesichert', 'Keine Speicherung deiner Daten bei uns'],
     },
   ]
 

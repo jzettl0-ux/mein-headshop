@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {"path": "/api/cron/refresh-vault-drops", "schedule": "*/15 * * * *"},
+    {"path": "/api/cron/notify-drop-radar", "schedule": "*/30 * * * *"},
+    {"path": "/api/cron/refresh-fbt", "schedule": "0 3 * * *"},
+    {"path": "/api/cron/refresh-asin-locks", "schedule": "30 3 * * *"},
+    {"path": "/api/cron/refresh-vendor-metrics", "schedule": "0 4 * * *"},
+    {"path": "/api/cron/check-tracking", "schedule": "0 8 * * *"},
+    {"path": "/api/cron/auto-cancel-unpaid", "schedule": "0 */6 * * *"},
+    {"path": "/api/cron/refresh-ncx-scores", "schedule": "0 5 * * *"},
+    {"path": "/api/cron/refresh-search-frequency-rank", "schedule": "0 6 * * 0"},
+    {"path": "/api/cron/refresh-replenishment-predictions", "schedule": "0 7 * * *"}
+  ]
+}

@@ -20,6 +20,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 /**
  * Break-even: Verkaufspreis so dass Erlös - alle Kosten = 0 (oder Plus).
  * Kosten pro Artikel: Einkauf + Zahlungsgebühr + Versandanteil + Shop-Anteil + Verpackung.
+ * Optional: Umsatzsteuer (MwSt.) – der Anteil, den du an den Staat abführst, mindert den Netto-Erlös.
  */
 function round2(n: number) {
   return Math.round(n * 100) / 100
@@ -45,6 +46,8 @@ export default function AdminMarginPage() {
   const [shopMonthly, setShopMonthly] = useState('50')
   const [ordersPerMonth, setOrdersPerMonth] = useState('30')
   const [packagingPerItem, setPackagingPerItem] = useState('0.50')
+  /** Umsatzsteuer in % (z. B. 19) – Anteil vom Verkaufspreis, der an den Staat geht. 0 = nicht berücksichtigt. */
+  const [vatPercent, setVatPercent] = useState('19')
 
   const [products, setProducts] = useState<ProductRow[]>([])
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null)
@@ -124,6 +127,8 @@ export default function AdminMarginPage() {
   const shopMon = parseFloat(shopMonthly) || 0
   const ordersMon = Math.max(0.1, parseFloat(ordersPerMonth) || 1)
   const packaging = parseFloat(packagingPerItem) || 0
+  const vatPct = Math.max(0, Math.min(100, parseFloat(vatPercent) || 0))
+  const vatFactor = 1 + vatPct / 100 // Brutto = Netto * vatFactor
 
   const shippingPerItem = shipOrder / itemsOrder
   const shopPerOrder = shopMon / ordersMon
@@ -131,12 +136,20 @@ export default function AdminMarginPage() {
 
   const costTotalPerItem = cost + payFix + shippingPerItem + shopPerItem + packaging
 
-  const breakEvenPrice = payPct >= 100 ? 0 : costTotalPerItem / (1 - payPct / 100)
+  // Break-even: Brutto-Preis B so dass Netto-Erlös (nach MwSt.) − alle Kosten = 0
+  // Netto = B / vatFactor; Zahlungsgebühr = B * payPct/100 + payFix
+  // B/vatFactor − cost − (B*payPct/100 + payFix) − shipping − shop − packaging = 0
+  // B/vatFactor − B*payPct/100 = costTotalPerItem + payFix  =>  B * (1/vatFactor − payPct/100) = costTotalPerItem + payFix
+  const netCoeff = 1 / vatFactor - payPct / 100
+  const breakEvenPrice =
+    payPct >= 100 ? 0 : netCoeff <= 0 ? Infinity : (costTotalPerItem + payFix) / netCoeff
   const breakEvenRounded = round2(breakEvenPrice)
 
   const sell = parseFloat(sellingPrice) || 0
   const paymentFeeOnSell = sell * (payPct / 100) + payFix
-  const profitPerItem = sell - cost - paymentFeeOnSell - shippingPerItem - shopPerItem - packaging
+  const netRevenue = vatFactor > 0 ? sell / vatFactor : sell
+  const vatAmount = sell - netRevenue
+  const profitPerItem = netRevenue - cost - paymentFeeOnSell - shippingPerItem - shopPerItem - packaging
   const profitRounded = round2(profitPerItem)
   const marginPercent = sell > 0 ? round2((profitPerItem / sell) * 100) : 0
 
@@ -250,6 +263,22 @@ export default function AdminMarginPage() {
                 className="bg-luxe-gray border-luxe-silver text-white mt-1"
               />
             </div>
+            <div>
+              <Label className="text-white">Umsatzsteuer (MwSt.) %</Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                value={vatPercent}
+                onChange={(e) => setVatPercent(e.target.value)}
+                placeholder="19"
+                className="bg-luxe-gray border-luxe-silver text-white mt-1"
+              />
+              <p className="text-xs text-luxe-silver mt-1">
+                Anteil des Verkaufspreises, den du an den Staat abführst (z. B. 19 %). 0 = nicht einberechnet.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -328,16 +357,21 @@ export default function AdminMarginPage() {
               <div className="p-4 rounded-lg bg-luxe-gold/10 border border-luxe-gold/50">
                 <p className="text-luxe-silver text-sm">Mindestverkaufspreis (Break-even)</p>
                 <p className="text-2xl font-bold text-luxe-gold">
-                  {cost > 0 ? `${breakEvenRounded.toFixed(2)} €` : '—'}
+                  {cost > 0 && breakEvenRounded < 1e6 ? `${breakEvenRounded.toFixed(2)} €` : cost > 0 ? '—' : '—'}
                 </p>
                 <p className="text-xs text-luxe-silver mt-1">
-                  Darunter machst du Verlust (nach allen Kosten).
+                  Darunter machst du Verlust (nach allen Kosten{vatPct > 0 ? ' inkl. MwSt.-Abgabe' : ''}).
                 </p>
               </div>
 
               {sell > 0 && (
                 <div className={`p-4 rounded-lg border ${profitRounded >= 0 ? 'bg-green-500/10 border-green-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
                   <p className="text-luxe-silver text-sm">Gewinn/Verlust bei {sell} € Verkaufspreis</p>
+                  {vatPct > 0 && (
+                    <p className="text-xs text-luxe-silver mt-0.5">
+                      Davon MwSt. ({vatPct} %) an den Staat: {round2(vatAmount).toFixed(2)} € · Netto-Erlös: {round2(netRevenue).toFixed(2)} €
+                    </p>
+                  )}
                   <p className={`text-2xl font-bold ${profitRounded >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {profitRounded >= 0 ? '+' : ''}{profitRounded.toFixed(2)} €
                   </p>

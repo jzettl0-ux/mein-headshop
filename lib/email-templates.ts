@@ -37,27 +37,28 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #0A0A0A;
-      color: #FFFFFF;
+      background-color: #FDFBF5;
+      color: #262626;
       margin: 0;
       padding: 20px;
     }
     .container {
       max-width: 600px;
       margin: 0 auto;
-      background-color: #1A1A1A;
-      border: 1px solid #2A2A2A;
+      background-color: #FFFFFF;
+      border: 1px solid #e5e5e5;
       border-radius: 16px;
       overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
     .header {
-      background: linear-gradient(135deg, #D4AF37 0%, #39FF14 100%);
+      background: #F5F5F5;
       padding: 32px;
       text-align: center;
     }
     .header h1 {
       margin: 0;
-      color: #0A0A0A;
+      color: #262626;
       font-size: 28px;
       font-weight: bold;
     }
@@ -65,25 +66,26 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
       padding: 32px;
     }
     .order-number {
-      background-color: #2A2A2A;
-      border: 1px solid #D4AF37;
+      background-color: #f0f7f0;
+      border: 1px solid #2D5A2D;
       border-radius: 8px;
       padding: 16px;
       text-align: center;
       margin: 24px 0;
     }
     .order-number strong {
-      color: #D4AF37;
+      color: #2D5A2D;
       font-size: 24px;
     }
     .info-box {
-      background-color: #2A2A2A;
+      background-color: #fafafa;
+      border: 1px solid #e5e5e5;
       border-radius: 8px;
       padding: 16px;
       margin: 16px 0;
     }
     .adult-warning {
-      background-color: rgba(239, 68, 68, 0.1);
+      background-color: rgba(239, 68, 68, 0.08);
       border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: 8px;
       padding: 16px;
@@ -97,17 +99,19 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
     .items-table th {
       text-align: left;
       padding: 12px;
-      background-color: #2A2A2A;
-      color: #8A8A8A;
+      background-color: #fafafa;
+      color: #525252;
       font-size: 12px;
       text-transform: uppercase;
     }
     .items-table td {
       padding: 12px;
-      border-bottom: 1px solid #2A2A2A;
+      border-bottom: 1px solid #e5e5e5;
+      color: #262626;
     }
     .totals {
-      background-color: #2A2A2A;
+      background-color: #fafafa;
+      border: 1px solid #e5e5e5;
       border-radius: 8px;
       padding: 16px;
       margin-top: 24px;
@@ -116,25 +120,25 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      color: #8A8A8A;
+      color: #525252;
     }
     .totals-row.total {
-      border-top: 2px solid #D4AF37;
+      border-top: 2px solid #2D5A2D;
       padding-top: 16px;
       margin-top: 8px;
       font-size: 20px;
       font-weight: bold;
-      color: #D4AF37;
+      color: #2D5A2D;
     }
     .footer {
-      background-color: #0A0A0A;
+      background-color: #FDFBF5;
       padding: 24px;
       text-align: center;
-      color: #8A8A8A;
+      color: #525252;
       font-size: 12px;
     }
     a {
-      color: #D4AF37;
+      color: #2D5A2D;
       text-decoration: none;
     }
   </style>
@@ -148,15 +152,15 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
 
     <!-- Content -->
     <div class="content">
-      <h2 style="color: #FFFFFF; margin-top: 0;">Hallo ${data.customerName},</h2>
-      <p style="color: #8A8A8A; line-height: 1.6;">
-        vielen Dank für deine Bestellung bei <strong style="color: #D4AF37;">Premium Headshop</strong>!
+      <h2 style="color: #262626; margin-top: 0;">Hallo ${data.customerName},</h2>
+      <p style="color: #525252; line-height: 1.6;">
+        vielen Dank für deine Bestellung bei <strong style="color: #2D5A2D;">Premium Headshop</strong>!
         Wir haben deine Bestellung erhalten und werden sie schnellstmöglich bearbeiten.
       </p>
 
       <!-- Order Number -->
       <div class="order-number">
-        <p style="margin: 0; color: #8A8A8A; font-size: 14px;">Deine Bestellnummer</p>
+        <p style="margin: 0; color: #525252; font-size: 14px;">Deine Bestellnummer</p>
         <strong>${data.orderNumber}</strong>
       </div>
 
@@ -174,7 +178,7 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
       ` : ''}
 
       <!-- Items -->
-      <h3 style="color: #FFFFFF; margin-top: 32px;">Bestellte Artikel</h3>
+      <h3 style="color: #262626; margin-top: 32px;">Bestellte Artikel</h3>
       <table class="items-table">
         <thead>
           <tr>
@@ -186,9 +190,9 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
         <tbody>
           ${data.items.map(item => `
             <tr>
-              <td style="color: #FFFFFF;">${item.name}</td>
-              <td style="color: #8A8A8A;">${item.quantity}x</td>
-              <td style="color: #FFFFFF; text-align: right;">
+              <td style="color: #262626;">${item.name}</td>
+              <td style="color: #525252;">${item.quantity}x</td>
+              <td style="color: #262626; text-align: right;">
                 ${(item.price * item.quantity).toFixed(2)} €
               </td>
             </tr>
@@ -220,8 +224,8 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
 
       <!-- Shipping Address -->
       <div class="info-box">
-        <h4 style="color: #FFFFFF; margin: 0 0 12px;">📦 Lieferadresse</h4>
-        <p style="color: #8A8A8A; margin: 0; line-height: 1.6;">
+        <h4 style="color: #262626; margin: 0 0 12px;">📦 Lieferadresse</h4>
+        <p style="color: #525252; margin: 0; line-height: 1.6;">
           ${data.customerName}<br>
           ${data.shippingAddress.street} ${data.shippingAddress.house_number}<br>
           ${data.shippingAddress.postal_code} ${data.shippingAddress.city}
@@ -230,18 +234,18 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
 
       ${data.accountOrdersUrl ? `
       <div class="info-box">
-        <h4 style="color: #FFFFFF; margin: 0 0 12px;">📄 Rechnung</h4>
-        <p style="color: #8A8A8A; margin: 0; line-height: 1.6;">
+        <h4 style="color: #262626; margin: 0 0 12px;">📄 Rechnung</h4>
+        <p style="color: #525252; margin: 0; line-height: 1.6;">
           Deine Rechnung kannst du jederzeit in deinem Kundenbereich als PDF abrufen:
-          <a href="${data.accountOrdersUrl}" style="color: #D4AF37;">Rechnung im Kundenbereich anzeigen</a>
+          <a href="${data.accountOrdersUrl}" style="color: #2D5A2D;">Rechnung im Kundenbereich anzeigen</a>
         </p>
       </div>
       ` : ''}
 
       <!-- Next Steps -->
       <div class="info-box">
-        <h4 style="color: #FFFFFF; margin: 0 0 12px;">📬 Wie geht es weiter?</h4>
-        <ul style="color: #8A8A8A; margin: 0; padding-left: 20px; line-height: 1.8;">
+        <h4 style="color: #262626; margin: 0 0 12px;">📬 Wie geht es weiter?</h4>
+        <ul style="color: #525252; margin: 0; padding-left: 20px; line-height: 1.8;">
           <li>Wir bearbeiten deine Bestellung innerhalb von 24 Stunden</li>
           <li>Du erhältst eine separate Email mit der Tracking-Nummer</li>
           <li>Die Lieferzeit beträgt 2-5 Werktage</li>
@@ -252,7 +256,7 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
       <!-- CTA -->
       <div style="text-align: center; margin-top: 32px;">
         <a href="${process.env.NEXT_PUBLIC_SITE_URL}/account" 
-           style="display: inline-block; background-color: #D4AF37; color: #0A0A0A; 
+           style="display: inline-block; background-color: #2D5A2D; color: #ffffff; 
                   padding: 12px 32px; border-radius: 8px; font-weight: bold; 
                   text-decoration: none;">
           Bestellung verfolgen
@@ -264,7 +268,7 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): string {
     <div class="footer">
       <p>
         Bei Fragen zur Bestellung:<br>
-        <a href="mailto:support@premium-headshop.de">support@premium-headshop.de</a>
+        <a href="mailto:support@premium-headshop.de" style="color: #2D5A2D;">support@premium-headshop.de</a>
       </p>
       <p style="margin-top: 16px;">
         © ${new Date().getFullYear()} Premium Headshop. Alle Rechte vorbehalten.
@@ -287,29 +291,30 @@ export function generateShippingNotificationEmail(orderNumber: string, trackingN
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Deine Bestellung wurde versandt - Premium Headshop</title>
 </head>
-<body style="font-family: sans-serif; background-color: #0A0A0A; color: #FFFFFF; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #1A1A1A; border: 1px solid #2A2A2A; border-radius: 16px; overflow: hidden;">
-    <div style="background: linear-gradient(135deg, #39FF14 0%, #D4AF37 100%); padding: 32px; text-align: center;">
-      <h1 style="margin: 0; color: #0A0A0A; font-size: 28px;">📦 Dein Paket ist unterwegs!</h1>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #FDFBF5; color: #262626; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border: 1px solid #e5e5e5; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background: #F5F5F5; padding: 32px; text-align: center;">
+      <h1 style="margin: 0; color: #262626; font-size: 28px;">📦 Dein Paket ist unterwegs!</h1>
     </div>
     
     <div style="padding: 32px;">
-      <h2 style="color: #FFFFFF;">Hallo,</h2>
-      <p style="color: #8A8A8A; line-height: 1.6;">
-        gute Neuigkeiten! Deine Bestellung <strong style="color: #D4AF37;">#${orderNumber}</strong> 
+      <h2 style="color: #262626;">Hallo,</h2>
+      <p style="color: #525252; line-height: 1.6;">
+        gute Neuigkeiten! Deine Bestellung <strong style="color: #2D5A2D;">#${orderNumber}</strong> 
         wurde soeben versandt und ist auf dem Weg zu dir.
       </p>
 
-      <div style="background-color: #2A2A2A; border: 1px solid #D4AF37; border-radius: 8px; padding: 16px; text-align: center; margin: 24px 0;">
-        <p style="margin: 0; color: #8A8A8A; font-size: 14px;">Tracking-Nummer</p>
-        <strong style="color: #D4AF37; font-size: 20px;">${trackingNumber}</strong>
+      <div style="background-color: #f0f7f0; border: 1px solid #2D5A2D; border-radius: 8px; padding: 16px; text-align: center; margin: 24px 0;">
+        <p style="margin: 0; color: #525252; font-size: 14px;">Tracking-Nummer</p>
+        <strong style="color: #2D5A2D; font-size: 20px;">${trackingNumber}</strong>
       </div>
 
       <div style="text-align: center; margin-top: 32px;">
         <a href="https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${trackingNumber}" 
-           style="display: inline-block; background-color: #D4AF37; color: #0A0A0A; 
+           style="display: inline-block; background-color: #2D5A2D; color: #ffffff; 
                   padding: 12px 32px; border-radius: 8px; font-weight: bold; text-decoration: none;">
           Sendung verfolgen
         </a>

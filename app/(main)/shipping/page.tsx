@@ -16,12 +16,31 @@ export default function ShippingPage() {
               <div className="w-12 h-12 bg-luxe-gold/10 rounded-lg flex items-center justify-center mb-4">
                 <Truck className="w-6 h-6 text-luxe-gold" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Versandkosten</h3>
-              <p className="text-luxe-silver">
-                Standard: 4,90€<br />
-                Mit 18+ Produkt: 6,90€<br />
-                <span className="text-luxe-neon">Ab 50€: Kostenlos</span>
-              </p>
+              <h3 className="text-xl font-bold text-white mb-3">Versandkosten-Übersicht</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-luxe-silver border-collapse">
+                  <thead>
+                    <tr className="border-b border-luxe-gray">
+                      <th className="text-left py-2 pr-4 text-white font-medium">Bestellwert</th>
+                      <th className="text-left py-2 pr-4 text-white font-medium">Standard</th>
+                      <th className="text-left py-2 text-white font-medium">Mit 18+ Artikel</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-luxe-gray/60">
+                      <td className="py-2 pr-4">unter 50 €</td>
+                      <td className="py-2 pr-4">4,90 €</td>
+                      <td className="py-2">6,90 € (inkl. Ident-Check 2,00 €)</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 text-luxe-neon font-medium">50 € und mehr</td>
+                      <td className="py-2 pr-4 text-luxe-neon font-medium">kostenlos</td>
+                      <td className="py-2 text-luxe-neon font-medium">2,00 € (nur Ident-Check)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-luxe-silver/80 text-xs mt-3">Nur Deutschland. Keine Mindestbestellmenge.</p>
             </CardContent>
           </Card>
 

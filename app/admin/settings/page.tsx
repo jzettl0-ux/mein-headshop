@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { uploadSiteLogo } from '@/lib/supabase'
+import { AdminBereichErklaerung } from '@/components/admin/admin-bereich-erklaerung'
 
 const DEFAULT_LABELS: Record<string, string> = {
   primary: 'Hauptfarbe (Gold/Akzent)',
@@ -41,14 +42,15 @@ export default function AdminSettingsPage() {
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data: Record<string, string>) => {
-        const { logo_url, ...rest } = data
+        const { logo_url, homepage_influencer_limit, ...rest } = data
         if (logo_url) setLogoUrl(logo_url)
         setColors({ ...DEFAULT_COLORS, ...rest })
-        const known = new Set([...Object.keys(DEFAULT_COLORS), 'logo_url'])
+        const known = new Set([...Object.keys(DEFAULT_COLORS), 'logo_url', 'homepage_influencer_limit'])
         setCustomKeys(Object.keys(rest).filter((k) => !known.has(k)))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+
   }, [])
 
   const handleChange = (key: string, value: string) => {
@@ -83,8 +85,8 @@ export default function AdminSettingsPage() {
       })
       if (!res.ok) throw new Error('Speichern fehlgeschlagen')
       toast({
-        title: 'Branding gespeichert',
-        description: 'Die Farben wurden aktualisiert.',
+        title: 'Markenauftritt gespeichert',
+        description: 'Die Farben gelten shopweit und stehen auch bei den Influencer-Einstellungen zur Auswahl.',
       })
       const root = document.documentElement
       for (const [key, value] of Object.entries(colors)) {
@@ -93,7 +95,7 @@ export default function AdminSettingsPage() {
     } catch {
       toast({
         title: 'Fehler',
-        description: 'Branding konnte nicht gespeichert werden.',
+        description: 'Markenauftritt konnte nicht gespeichert werden.',
         variant: 'destructive',
       })
     } finally {
@@ -120,8 +122,8 @@ export default function AdminSettingsPage() {
       if (!res.ok) throw new Error('Speichern fehlgeschlagen')
       setLogoUrl(url)
       toast({ title: 'Logo hochgeladen', description: 'Das neue Logo wird im Header angezeigt.' })
-    } catch (err: any) {
-      toast({ title: 'Upload fehlgeschlagen', description: err.message || 'Bitte erneut versuchen.', variant: 'destructive' })
+    } catch (err: unknown) {
+      toast({ title: 'Upload fehlgeschlagen', description: (err as Error)?.message || 'Bitte erneut versuchen.', variant: 'destructive' })
     } finally {
       setLogoUploading(false)
       e.target.value = ''
@@ -151,115 +153,119 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-3xl font-bold text-white flex items-center gap-2">
           <Palette className="w-8 h-8 text-luxe-gold" />
-          Branding & Farben
+          Einstellungen
         </h1>
         <p className="text-luxe-silver mt-1">
-          Passe die Markenfarben und das Logo für den gesamten Shop an. Änderungen wirken sofort.
+          Logo und Farbpalette für den gesamten Shop.
         </p>
       </div>
 
-      <Card className="bg-luxe-charcoal border-luxe-gray">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-luxe-gold" />
-            Logo
-          </CardTitle>
-          <p className="text-sm text-luxe-silver">
-            Lade ein Bild vom PC hoch – es ersetzt das Logo im Header. Empfohlen: quadratisch oder Querformat, z. B. 200×200 px (PNG oder JPG).
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {logoUrl && (
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-lg overflow-hidden bg-luxe-gray border border-luxe-silver flex-shrink-0">
-                <img src={logoUrl} alt="Aktuelles Logo" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <p className="text-white text-sm">Aktuelles Logo</p>
-                <Button type="button" variant="outline" size="sm" onClick={removeLogo} className="mt-2 border-red-500/50 text-red-400 hover:bg-red-500/10">
-                  Logo entfernen (Standard anzeigen)
-                </Button>
-              </div>
-            </div>
-          )}
-          <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-luxe-gray border border-luxe-silver text-white hover:bg-luxe-gray/80 text-sm">
-            <input type="file" accept="image/*" className="hidden" disabled={logoUploading} onChange={handleLogoUpload} />
-            {logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {logoUploading ? 'Wird hochgeladen…' : (logoUrl ? 'Neues Logo wählen' : 'Logo vom PC hochladen')}
-          </label>
-        </CardContent>
-      </Card>
+      <AdminBereichErklaerung
+        titel="Markenauftritt & Farben"
+        zweck="Logo und Firmenfarben gelten für den gesamten Shop – Header, Buttons, E-Mails. Die Farben stehen auch bei den Influencer-Einstellungen zur Auswahl."
+        funktionsweise="Logo hochladen: wird im Header und in E-Mails angezeigt. Farbpalette: Hauptfarbe (Gold/Akzent), Neon, Hintergrundfarben. Du kannst eigene Farben hinzufügen – sie erscheinen automatisch bei den Influencern."
+        wannNutzen="Beim Einrichten des Shops und bei Rebranding."
+      />
 
-      <Card className="bg-luxe-charcoal border-luxe-gray">
-        <CardHeader>
-          <CardTitle className="text-white">Farbpalette</CardTitle>
-          <p className="text-sm text-luxe-silver">
-            Hauptfarbe und Neon werden für Buttons, Badges und Akzente genutzt. Dunkeltöne für Hintergründe.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {Object.keys(colors).map((key) => (
-            <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <Label className="text-white sm:w-48">{labelFor(key)}</Label>
-              <div className="flex items-center gap-3 flex-1">
-                <input
-                  type="color"
-                  value={colors[key] ?? '#000'}
-                  onChange={(e) => handleChange(key, e.target.value)}
-                  className="w-12 h-12 rounded border border-luxe-gray cursor-pointer bg-transparent"
-                />
-                <Input
-                  value={colors[key] ?? ''}
-                  onChange={(e) => handleChange(key, e.target.value)}
-                  className="bg-luxe-gray border-luxe-gray text-white font-mono max-w-[140px]"
-                  placeholder="#hex"
-                />
-                {customKeys.includes(key) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-400 hover:text-red-300"
-                    onClick={() => removeColor(key)}
-                  >
-                    <Trash2 className="w-4 h-4" />
+      {/* ========== NUR MARKENAUFTRITT & FARBEN ========== */}
+      <section className="space-y-6">
+        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <Palette className="w-5 h-5 text-luxe-gold" />
+          Markenauftritt & Farben
+        </h2>
+        <p className="text-sm text-luxe-silver -mt-2">
+          Logo und Farbpalette gelten für den gesamten Shop. Gespeicherte Farben stehen auch bei jedem Influencer unter „Branding“ zur Auswahl – du kannst Farben aber genauso direkt beim Influencer setzen und von dort als Shop-Standard übernehmen.
+        </p>
+
+        <Card className="bg-luxe-charcoal border-luxe-gray">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2 text-lg">
+              <ImageIcon className="w-5 h-5 text-luxe-gold" />
+              Logo
+            </CardTitle>
+            <p className="text-sm text-luxe-silver">
+              Wird im Header und in E-Mails angezeigt. Empfohlen: quadratisch oder Querformat, z. B. 200×200 px (PNG oder JPG).
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {logoUrl && (
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-lg overflow-hidden bg-luxe-gray border border-luxe-silver flex-shrink-0">
+                  <img src={logoUrl} alt="Aktuelles Logo" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <p className="text-white text-sm">Aktuelles Logo</p>
+                  <Button type="button" variant="outline" size="sm" onClick={removeLogo} className="mt-2 border-red-500/50 text-red-400 hover:bg-red-500/10">
+                    Logo entfernen
                   </Button>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-luxe-gray">
-            <Input
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              placeholder="Neue Farbe (z. B. secondary)"
-              className="bg-luxe-gray border-luxe-gray text-white max-w-[200px]"
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
-            />
-            <Button type="button" variant="outline" size="sm" onClick={addColor} className="border-luxe-gray text-white">
-              <Plus className="w-4 h-4 mr-1" />
-              Farbe hinzufügen
-            </Button>
-          </div>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            variant="luxe"
-            className="mt-4"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Check className="w-4 h-4 mr-2" />
             )}
-            Farben speichern
-          </Button>
-        </CardContent>
-      </Card>
+            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-luxe-gray border border-luxe-silver text-white hover:bg-luxe-gray/80 text-sm">
+              <input type="file" accept="image/*" className="hidden" disabled={logoUploading} onChange={handleLogoUpload} />
+              {logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {logoUploading ? 'Wird hochgeladen…' : (logoUrl ? 'Neues Logo wählen' : 'Logo hochladen')}
+            </label>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-luxe-charcoal border-luxe-gray">
+          <CardHeader>
+            <CardTitle className="text-white text-lg">Farbpalette (Shop-weit)</CardTitle>
+            <p className="text-sm text-luxe-silver">
+              Hauptfarbe und Neon für Buttons, Badges und Akzente; Dunkeltöne für Hintergründe und Rahmen. Du kannst beliebig viele eigene Farben hinzufügen – sie erscheinen auch in den Influencer-Branding-Einstellungen.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Object.keys(colors).map((key) => (
+              <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Label className="text-white sm:w-48">{labelFor(key)}</Label>
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="color"
+                    value={colors[key] ?? '#000'}
+                    onChange={(e) => handleChange(key, e.target.value)}
+                    className="w-12 h-12 rounded border border-luxe-gray cursor-pointer bg-transparent"
+                  />
+                  <Input
+                    value={colors[key] ?? ''}
+                    onChange={(e) => handleChange(key, e.target.value)}
+                    className="bg-luxe-gray border-luxe-gray text-white font-mono max-w-[140px]"
+                    placeholder="#hex"
+                  />
+                  {customKeys.includes(key) && (
+                    <Button type="button" variant="ghost" size="icon" className="text-red-400 hover:text-red-300" onClick={() => removeColor(key)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-luxe-gray">
+              <Input
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="Neue Farbe (z. B. secondary)"
+                className="bg-luxe-gray border-luxe-gray text-white max-w-[200px]"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addColor} className="border-luxe-gray text-white">
+                <Plus className="w-4 h-4 mr-1" />
+                Farbe hinzufügen
+              </Button>
+            </div>
+            <Button onClick={handleSave} disabled={saving} variant="luxe" className="mt-4">
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+              Farben speichern
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+
     </div>
   )
 }

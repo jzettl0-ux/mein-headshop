@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
  * Liest/schreibt Cookies über next/headers für Session-Konsistenz.
  */
 export async function createServerSupabase() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

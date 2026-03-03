@@ -48,6 +48,7 @@ export function SearchBar() {
       const { data } = await supabase
         .from('products')
         .select('id, name, slug, price, image_url, category')
+        .eq('is_active', true)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
         .limit(6)
 
@@ -126,8 +127,9 @@ export function SearchBar() {
                       Suche...
                     </div>
                   ) : results.length === 0 && query.length >= 2 ? (
-                    <div className="p-8 text-center text-luxe-silver">
-                      Keine Produkte gefunden
+                    <div className="p-8 text-center">
+                      <p className="text-luxe-silver">Keine Produkte gefunden</p>
+                      <p className="text-luxe-silver/80 text-sm mt-1">Versuch einen anderen Suchbegriff – oder stöbere durch den Shop.</p>
                     </div>
                   ) : results.length > 0 ? (
                     <div className="p-2">

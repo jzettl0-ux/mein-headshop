@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
+import { createSupabaseAdmin, hasSupabaseAdmin } from '@/lib/supabase-admin'
 
 /**
  * POST body: { code: string, subtotal: number }
@@ -69,6 +70,23 @@ export async function POST(req: NextRequest) {
       discountAmount = Math.round((subtotal * Number(row.value)) / 100 * 100) / 100
     } else {
       discountAmount = Math.min(Number(row.value), subtotal)
+    }
+
+    // Phase 11.3: Coupon-Budget prüfen
+    if (hasSupabaseAdmin() && discountAmount > 0) {
+      const admin = createSupabaseAdmin()
+      const { data: coupon } = await admin.schema('advanced_ops').from('coupons').select('budget_eur, budget_used_eur').eq('discount_code_id', row.id).eq('is_active', true).maybeSingle()
+      if (coupon && coupon.budget_eur != null) {
+        const used = Number(coupon.budget_used_eur ?? 0)
+        const budget = Number(coupon.budget_eur)
+        if (used >= budget || used + discountAmount > budget) {
+          return NextResponse.json({
+            valid: false,
+            discountAmount: 0,
+            message: 'Das Budget dieses Gutscheins ist erschöpft.',
+          })
+        }
+      }
     }
 
     return NextResponse.json({

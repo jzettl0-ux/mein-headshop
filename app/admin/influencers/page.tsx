@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, Edit, Trash2, ExternalLink, Instagram } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, ExternalLink, TrendingUp, Wallet, Banknote, CheckCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { formatPrice } from '@/lib/utils'
 
 // Mock influencers - später durch echte Supabase-Daten ersetzen
 const mockInfluencers = [
@@ -45,14 +46,58 @@ const mockInfluencers = [
   },
 ]
 
+type PerformanceRow = {
+  id: string
+  name: string
+  slug: string
+  commission_rate: number
+  revenue: number
+  commission: number
+  open_balance: number
+  requested_payouts: { id: string; amount: number; requested_at: string | null }[]
+}
+
 export default function AdminInfluencersPage() {
   const [influencers, setInfluencers] = useState(mockInfluencers)
   const [searchTerm, setSearchTerm] = useState('')
+  const [performance, setPerformance] = useState<PerformanceRow[]>([])
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     loadInfluencers()
   }, [])
+
+  useEffect(() => {
+    fetch('/api/admin/influencers/performance')
+      .then((r) => (r.ok ? r.json() : { influencers: [] }))
+      .then((d) => setPerformance(d.influencers ?? []))
+      .catch(() => setPerformance([]))
+  }, [])
+
+  const handleConfirmPayout = async (payoutId: string) => {
+    setConfirmingId(payoutId)
+    try {
+      const res = await fetch('/api/admin/influencers/payouts/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payout_id: payoutId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast({ title: data.error ?? 'Fehler', variant: 'destructive' })
+        return
+      }
+      toast({ title: data.message ?? 'Auszahlung bestätigt' })
+      const next = await fetch('/api/admin/influencers/performance')
+      if (next.ok) {
+        const j = await next.json()
+        setPerformance(j.influencers ?? [])
+      }
+    } finally {
+      setConfirmingId(null)
+    }
+  }
 
   const loadInfluencers = async () => {
     const { data, error } = await supabase
@@ -264,6 +309,77 @@ export default function AdminInfluencersPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Performance & Auszahlungen */}
+      <Card className="bg-luxe-charcoal border-luxe-gray mt-10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-luxe-gold" />
+            Performance & Auszahlungen
+          </CardTitle>
+          <CardDescription className="text-luxe-silver">
+            Umsatz und Provision pro Partner; angefragte Auszahlungen bestätigen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {performance.length === 0 ? (
+            <p className="text-luxe-silver py-4">Keine Performance-Daten.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-luxe-gray text-left text-luxe-silver">
+                    <th className="pb-3 pr-4">Partner</th>
+                    <th className="pb-3 pr-4">Umsatz</th>
+                    <th className="pb-3 pr-4">Provision</th>
+                    <th className="pb-3 pr-4">Offen</th>
+                    <th className="pb-3">Auszahlungen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performance.map((p) => (
+                    <tr key={p.id} className="border-b border-luxe-gray/70">
+                      <td className="py-3 pr-4 font-medium text-white">{p.name}</td>
+                      <td className="py-3 pr-4 text-white">{formatPrice(p.revenue)}</td>
+                      <td className="py-3 pr-4 text-luxe-gold">{formatPrice(p.commission)}</td>
+                      <td className="py-3 pr-4 text-white">{formatPrice(p.open_balance)}</td>
+                      <td className="py-3">
+                        {p.requested_payouts.length === 0 ? (
+                          <span className="text-luxe-silver">–</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {p.requested_payouts.map((req) => (
+                              <div key={req.id} className="flex items-center gap-2">
+                                <span className="text-white">{formatPrice(req.amount)}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                                  disabled={confirmingId === req.id}
+                                  onClick={() => handleConfirmPayout(req.id)}
+                                >
+                                  {confirmingId === req.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      Auszahlung bestätigen
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
